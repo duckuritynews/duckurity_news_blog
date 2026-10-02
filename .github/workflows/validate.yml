@@ -1,0 +1,26 @@
+name: Validate pull requests
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm run build
+        env:
+          SITE_BASE: /duckurity_news_blog
+          SITE_URL: https://duckuritynews.github.io
+      - run: npm run verify:build
+      - run: npm run build:fixtures

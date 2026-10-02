@@ -1,0 +1,45 @@
+---
+import { Image } from "astro:assets";
+import { getCollection, render } from "astro:content";
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { articleRanks, getPublicArticles } from "../../lib/articles";
+import { siteUrl } from "../../lib/urls";
+
+export async function getStaticPaths() {
+  const entries = getPublicArticles(await getCollection("articles"));
+  const ranks = articleRanks(entries);
+  return entries.map((article) => ({ params: { slug: article.data.slug }, props: { article, rank: ranks.get(article.data.slug)! } }));
+}
+const { article, rank } = Astro.props;
+const { Content } = await render(article);
+const { data } = article;
+const published = new Date(data.publishedAt);
+const updated = data.updatedAt ? new Date(data.updatedAt) : undefined;
+---
+<SiteLayout title={`${data.title} | Duckurity 뉴스`} description={data.summary}>
+  <main id="main" class="site-main"><article class="article-width">
+    <header class="article-header">
+      <a href={siteUrl()} aria-label="Duckurity 뉴스 홈으로">← 전체 기사</a>
+      <p class="eyebrow">{data.level ?? "보안 브리핑"}</p>
+      <h1 data-pagefind-body data-pagefind-meta="title">{data.title}</h1>
+      <p class="article-summary" data-pagefind-body data-pagefind-meta="summary">{data.summary}</p>
+      <div class="article-meta"><span>작성: {data.authors.join(", ")}</span><span>게시 <time datetime={published.toISOString()}>{published.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>{updated && <span>수정 <time datetime={updated.toISOString()}>{updated.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>}</div>
+      <ul class="tags" aria-label="기사 태그">{data.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
+      {data.cover && <figure class="cover"><Image src={data.cover} alt={data.coverAlt ?? ""} widths={[640, 960, 1280]} sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)" /></figure>}
+      <section class="key-points" aria-labelledby="key-points-title"><h2 id="key-points-title">핵심 3줄</h2><ol>{data.keyPoints.map((point) => <li>{point}</li>)}</ol></section>
+    </header>
+    <span class="sr-only" aria-hidden="true" data-pagefind-sort={`latestRank:${rank.latestRank}`}></span>
+    <span class="sr-only" aria-hidden="true" data-pagefind-sort={`oldestRank:${rank.oldestRank}`}></span>
+    <span class="sr-only" aria-hidden="true" data-pagefind-sort={`titleKoRank:${rank.titleKoRank}`}></span>
+    <div class="prose" data-pagefind-body><p class="sr-only" aria-hidden="true">{data.tags.join(" ")} {data.searchAliases.join(" ")} {data.cveIds.join(" ")}</p><Content /></div>
+    <footer class="sources"><p>출처와 확인 시점을 확인하고 원문을 함께 표시합니다.</p><ul>{data.searchAliases.map((alias) => <li>관련 검색어: {alias}</li>)}{data.cveIds.map((id) => <li><a href={`https://nvd.nist.gov/vuln/detail/${id}`}>{id} · NVD</a></li>)}</ul></footer>
+  </article></main>
+  <Fragment slot="head">
+    <meta data-pagefind-meta="articleSlug[content]" content={data.slug} />
+    <meta data-pagefind-meta="tags[content]" content={data.tags.join(" ")} />
+    <meta data-pagefind-meta="publishedAt[content]" content={data.publishedAt} />
+    <meta data-pagefind-meta="authors[content]" content={data.authors.join(", ")} />
+    <meta data-pagefind-meta="level[content]" content={data.level ?? ""} />
+    <meta data-pagefind-meta="cveIds[content]" content={data.cveIds.join(" ")} />
+  </Fragment>
+</SiteLayout>
