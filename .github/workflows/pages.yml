@@ -22,11 +22,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - uses: actions/configure-pages@v5
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
       - run: npm run build
         env:
           SITE_BASE: /duckurity_news_blog
           SITE_URL: https://duckuritynews.github.io
+      - run: npm run verify:build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

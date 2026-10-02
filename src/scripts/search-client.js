@@ -1,4 +1,5 @@
 import { exactCveMatches } from "../lib/search.ts";
+import { articleUrl } from "../lib/urls";
 
 const form = document.querySelector("#article-controls");
 const input = document.querySelector("#article-search");
@@ -18,7 +19,6 @@ const pageSize = 10;
 let pagefind;
 let activeRequest = 0;
 let composing = false;
-let failedState;
 
 function queryState() {
   const params = new URLSearchParams(location.search);
@@ -43,7 +43,7 @@ function makeCard(article) {
   meta.append(date);
   if (article.level) { const level = document.createElement("span"); level.textContent = article.level; meta.append(level); }
   const heading = document.createElement("h2"); const link = document.createElement("a");
-  link.href = new URL(`articles/${encodeURIComponent(article.slug)}/`, basePath).pathname; link.textContent = article.title; heading.append(link);
+  link.href = articleUrl(article.slug); link.textContent = article.title; heading.append(link);
   const summary = document.createElement("p"); summary.textContent = article.summary;
   const tags = document.createElement("ul"); tags.className = "tags"; tags.setAttribute("aria-label", "기사 태그");
   for (const value of article.tags || []) { const tag = document.createElement("li"); tag.className = "tag"; tag.textContent = value; tags.append(tag); }
@@ -81,7 +81,6 @@ async function render(state, { address = false, replaceAddress = false } = {}) {
     setPages(state.page, pageCount, state); if (address) updateAddress(state, replaceAddress);
   } catch (error) {
     if (request !== activeRequest) return;
-    failedState = { ...state };
     resultsList.replaceChildren(); emptyState.hidden = true; pagination.hidden = true;
     if (address) updateAddress(state, replaceAddress);
     setStatus("검색 색인을 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.", "error");
@@ -90,9 +89,10 @@ async function render(state, { address = false, replaceAddress = false } = {}) {
   }
 }
 form.addEventListener("submit", (event) => { event.preventDefault(); render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true }); });
-input.addEventListener("compositionstart", () => { composing = true; }); input.addEventListener("compositionend", () => { composing = false; });
+input.addEventListener("compositionstart", () => { composing = true; });
+input.addEventListener("compositionend", () => { composing = false; render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true, replaceAddress: true }); });
 input.addEventListener("input", (event) => { if (!composing && !event.isComposing) render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true, replaceAddress: true }); });
 sortControl.addEventListener("change", () => render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true }));
 for (const [link, direction] of [[previous, -1], [next, 1]]) link.addEventListener("click", (event) => { event.preventDefault(); if (link.getAttribute("aria-disabled") === "true") return; render({ ...queryState(), page: queryState().page + direction }, { address: true }); });
 window.addEventListener("popstate", () => render(queryState()));
-render(queryState(), { replaceAddress: true });
+render(queryState(), { address: true, replaceAddress: true });

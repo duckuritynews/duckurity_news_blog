@@ -7,6 +7,7 @@
     "check": "astro check && node --experimental-strip-types --test src/lib/article-sort.test.ts",
     "build": "astro check && astro build && pagefind --site dist",
     "build:fixtures": "node scripts/build-fixtures.mjs",
+    "verify:build": "node --experimental-strip-types --experimental-vm-modules scripts/verify-build.mjs",
     "preview": "astro preview"
   },
   "dependencies": {

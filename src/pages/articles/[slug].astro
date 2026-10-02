@@ -21,8 +21,8 @@ const updated = data.updatedAt ? new Date(data.updatedAt) : undefined;
     <header class="article-header">
       <a href={siteUrl()} aria-label="Duckurity 뉴스 홈으로">← 전체 기사</a>
       <p class="eyebrow">{data.level ?? "보안 브리핑"}</p>
-      <h1 data-pagefind-meta="title">{data.title}</h1>
-      <p class="article-summary" data-pagefind-meta="summary">{data.summary}</p>
+      <h1 data-pagefind-body data-pagefind-meta="title">{data.title}</h1>
+      <p class="article-summary" data-pagefind-body data-pagefind-meta="summary">{data.summary}</p>
       <div class="article-meta"><span>작성: {data.authors.join(", ")}</span><span>게시 <time datetime={published.toISOString()}>{published.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>{updated && <span>수정 <time datetime={updated.toISOString()}>{updated.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>}</div>
       <ul class="tags" aria-label="기사 태그">{data.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
       {data.cover && <figure class="cover"><Image src={data.cover} alt={data.coverAlt ?? ""} widths={[640, 960, 1280]} sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)" /></figure>}

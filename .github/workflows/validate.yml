@@ -22,3 +22,5 @@ jobs:
         env:
           SITE_BASE: /duckurity_news_blog
           SITE_URL: https://duckuritynews.github.io
+      - run: npm run verify:build
+      - run: npm run build:fixtures

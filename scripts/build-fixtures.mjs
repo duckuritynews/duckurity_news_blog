@@ -1,8 +1,9 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
+import sharp from "sharp";
 
 const tempRoot = mkdtempSync(join(tmpdir(), "duckurity-blog-fixtures-"));
 const fixtureRoot = join(tempRoot, "articles");
@@ -44,7 +45,7 @@ try {
       "### What to notice", "", "- Long URLs wrap without widening the viewport.",
       "- Search includes the article body and tag terms.", "- Dates and tags remain visible on compact screens.", ""
     ].join("\n");
-    if (i === 3) body += "`nA CVE identifier found only in article body text: CVE-2026-34567.`n";
+    if (i === 3) body += "\nA CVE identifier found only in article body text: CVE-2026-34567.\n";
     if (i === 8) body += [
       "",
       "| Signal | Example | Context | Source | Date | Status | Notes | Owner |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -59,18 +60,31 @@ try {
       writeFileSync(join(images, "landscape.svg"), svg(900, 320, "#17635f", "Landscape"), "utf8");
       writeFileSync(join(images, "portrait.svg"), svg(320, 900, "#69518c", "Portrait"), "utf8");
       writeFileSync(join(images, "square.svg"), svg(512, 512, "#a85a37", "Square"), "utf8");
+      for (const format of ["png", "jpeg", "webp"]) {
+        await sharp({ create: { width: 32, height: 24, channels: 3, background: "#17635f" } })
+          .toFormat(format).toFile(join(images, `raster.${format}`));
+        body += `\n![Raster ${format}](./images/raster.${format})\n`;
+      }
       body += "\n### Image aspect ratio fixtures\n\n![Landscape sample](./images/landscape.svg)\n\n![Portrait sample](./images/portrait.svg)\n\n![Square sample](./images/square.svg)\n";
     }
     body += "\n## References\n\n- Synthetic fixture source: temporary local preview\n- Checked: 2026-09-30\n";
     const frontmatter = ["---", `slug: ${json(slug)}`, `title: ${json(titles[i])}`, `summary: ${json(summary)}`, `publishedAt: ${json(publishedAt)}`, "draft: false", `authors: ${json(["Duckurity UI fixture"])}`, `tags: ${json(tags[i])}`, `keyPoints: ${json(keyPoints)}`, `level: ${json(i % 2 ? "\uC911\uAE09" : "\uCD08\uAE09")}`, `searchAliases: ${json([`fixture-${i + 1}`])}`, `cveIds: ${json(cveIds)}`, "---", ""].join("\n");
     const articleDir = join(fixtureRoot, slug); mkdirSync(articleDir, { recursive: true });
     writeFileSync(join(articleDir, "index.md"), frontmatter + body, "utf8");
+    if (i === 11) {
+      for (const [name, metadata] of [["unpublished-draft", "draft: true"], ["unpublished-future", 'publishedAt: "2999-01-01T00:00:00Z"']]) {
+        const hiddenDir = join(fixtureRoot, name); mkdirSync(hiddenDir, { recursive: true });
+        const hiddenFrontmatter = frontmatter.replace(`slug: ${json(slug)}`, `slug: ${json(name)}`)
+          .replace(name === "unpublished-draft" ? "draft: false" : `publishedAt: ${json(publishedAt)}`, metadata);
+        writeFileSync(join(hiddenDir, "index.md"), hiddenFrontmatter + "Unpublished fixture.", "utf8");
+      }
+    }
   }
   const env = {
     ...process.env,
     ASTRO_CACHE_DIR: join(tempRoot, "astro-cache"),
     BUILD_FIXTURES_DIR: pathToFileURL(fixtureRoot).href,
-    SITE_BASE: "/duckurity_news_blog",
+    SITE_BASE: process.env.SITE_BASE ?? "/duckurity_news_blog",
   };
   const projectRoot = process.cwd();
   const astroCli = join(projectRoot, "node_modules", "astro", "bin", "astro.mjs");
@@ -82,9 +96,20 @@ try {
     const indexed = spawnSync(process.execPath, [pagefindCli, "--site", outDir], { cwd: projectRoot, env, encoding: "utf8" });
     process.stdout.write(indexed.stdout || ""); process.stderr.write(indexed.stderr || "");
     if (indexed.status !== 0) process.exitCode = indexed.status ?? 1;
-    else console.log(`Synthetic preview built with ${titles.length} sample articles at ${outDir}`);
+    else {
+      const verified = spawnSync(process.execPath, ["--experimental-strip-types", "--experimental-vm-modules", "scripts/verify-build.mjs", outDir], { cwd: projectRoot, env, encoding: "utf8" });
+      process.stdout.write(verified.stdout || ""); process.stderr.write(verified.stderr || "");
+      if (verified.status !== 0) process.exitCode = verified.status ?? 1;
+      else console.log(`Synthetic preview built and verified with ${titles.length} sample articles at ${outDir}`);
+    }
   }
 } finally {
   if (keepFixtures) console.log(`KEEP_FIXTURES=1 retained temporary preview at ${outDir}`);
-  else rmSync(tempRoot, { recursive: true, force: true });
+  else {
+    const cleanupRoot = resolve(tempRoot);
+    if (dirname(cleanupRoot) !== resolve(tmpdir()) || !cleanupRoot.startsWith(join(resolve(tmpdir()), "duckurity-blog-fixtures-"))) {
+      throw new Error(`Unexpected fixture cleanup path: ${cleanupRoot}`);
+    }
+    rmSync(cleanupRoot, { recursive: true, force: true });
+  }
 }
