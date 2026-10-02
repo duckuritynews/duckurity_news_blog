@@ -2,7 +2,7 @@
 slug: mrduck-introduce
 title: "우리의 마스코트를 소개합니다."
 summary: "Mr.Duck 소개"
-publishedAt: "2026-10-03T09:00:00+09:00"
+publishedAt: "2026-10-03T01:16:00+09:00"
 draft: false
 authors: ["홍건표"]
 tags: [etc.]
