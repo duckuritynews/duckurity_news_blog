@@ -36,13 +36,13 @@ const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
         <select id="article-sort" name="sort"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select>
       </label><button class="button" type="submit">검색</button></div>
     </form>
-    <p id="search-status" class="status" role="status" aria-live="polite">전체 기사 {entries.length}개 · 최신순</p>
-    <div id="empty-state" class="empty-state" hidden={entries.length > 0}><strong>아직 게시된 기사가 없습니다.</strong><p>새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.</p></div>
+    <p id="search-status" class="status" role="status" aria-live="polite">{entries.length ? `전체 기사 ${entries.length}개 · 최신순` : "아직 게시된 기사가 없습니다."}</p>
+    <div id="empty-state" class="empty-state" hidden={entries.length > 0}>새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.</div>
     <noscript><p class="noscript-note">Article links remain available without JavaScript. Full-text search, sorting, and pagination require JavaScript.</p></noscript>
-    <ol class="article-list" id="article-results" aria-label="보안 뉴스 목록">{ordered.map((article) => <ArticleCard article={article} />)}</ol>
+    <ol class="article-list" id="article-results" aria-label="보안 뉴스 목록" tabindex="-1">{ordered.map((article) => <ArticleCard article={article} />)}</ol>
     <nav class="pagination" id="pagination" aria-label="기사 목록 페이지" hidden>
       <a class="page-link" id="previous-page" href={`?${new URLSearchParams({ sort, page: String(Math.max(1, page.page - 1)) })}`} aria-disabled={page.page <= 1 ? "true" : "false"}>이전</a>
-      <span id="page-status" aria-live="polite">{page.page} / {page.pageCount}</span>
+      <span id="page-status">{page.page} / {page.pageCount}</span>
       <a class="page-link" id="next-page" href={`?${new URLSearchParams({ sort, page: String(Math.min(page.pageCount, page.page + 1)) })}`} aria-disabled={page.page >= page.pageCount ? "true" : "false"}>다음</a>
     </nav>
     <script type="application/json" id="article-catalog" set:html={safeCatalog}></script>

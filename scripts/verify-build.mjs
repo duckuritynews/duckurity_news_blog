@@ -89,6 +89,9 @@ class Element {
   getAttribute(key) { return this.attributes[key]; }
   addEventListener(event, callback) { (this.listeners[event] ||= []).push(callback); }
   fire(event, extra = {}) { for (const callback of this.listeners[event] || []) callback({ preventDefault() {}, ...extra }); }
+  focusCount = 0; scrollCount = 0;
+  focus() { this.focusCount++; }
+  scrollIntoView() { this.scrollCount++; }
 }
 const ids = ["article-controls", "article-search", "article-sort", "article-results", "search-status", "empty-state", "pagination", "previous-page", "next-page", "page-status", "search-config", "article-catalog"];
 const elements = Object.fromEntries(ids.map((id) => [id, new Element()]));
@@ -154,3 +157,5 @@ if (catalog.length) {
   }
 }
 console.log(`Verified ${catalog.length} articles, ${checkedAssets} local references, real search index, client links, all sorts, pagination, URL restoration, and IME input (base: ${base}).`);
+const { verifyClientStates } = await import("./verify-client-states.mjs");
+await verifyClientStates({ source: readFileSync(localFile(scriptPath), "utf8"), catalog, pagefind, base, pagefindPath });
