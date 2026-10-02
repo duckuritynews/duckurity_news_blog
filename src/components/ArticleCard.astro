@@ -1,0 +1,13 @@
+---
+import { articleUrl } from "../lib/urls";
+import type { ArticleEntry } from "../lib/articles";
+interface Props { article: ArticleEntry }
+const { article } = Astro.props;
+const date = new Date(article.data.publishedAt);
+---
+<li class="article-card">
+  <div class="card-meta"><time datetime={date.toISOString()}>{date.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time>{article.data.level && <span>{article.data.level}</span>}</div>
+  <h2><a href={articleUrl(article.data.slug)}>{article.data.title}</a></h2>
+  <p>{article.data.summary}</p>
+  <ul class="tags" aria-label="기사 태그">{article.data.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
+</li>

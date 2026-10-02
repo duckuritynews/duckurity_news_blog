@@ -1,0 +1,22 @@
+---
+import "../styles/global.css";
+import { siteUrl } from "../lib/urls";
+interface Props { title: string; description: string }
+const { title, description } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+---
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} /><link rel="canonical" href={canonical} />
+    <slot name="head" /><link rel="icon" href={siteUrl("favicon.svg")} type="image/svg+xml" />
+    <meta name="theme-color" content="#006d67" /><title>{title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문 바로가기</a>
+    <header class="site-header" data-pagefind-ignore><div class="shell header-row"><a class="brand" href={siteUrl()}>Duckurity 뉴스</a><span class="header-note">Security Briefing</span></div></header>
+    <slot />
+    <footer class="site-footer" data-pagefind-ignore><div class="shell">복잡한 보안 이슈를 핵심부터 읽습니다.</div></footer>
+  </body>
+</html>

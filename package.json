@@ -1,0 +1,21 @@
+{
+  "name": "duckurity-news-blog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "check": "astro check && node --experimental-strip-types --test src/lib/article-sort.test.ts",
+    "build": "astro check && astro build && pagefind --site dist",
+    "build:fixtures": "node scripts/build-fixtures.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "7.3.5",
+    "pagefind": "1.5.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@types/node": "24.19.0",
+    "typescript": "6.0.3"
+  }
+}
