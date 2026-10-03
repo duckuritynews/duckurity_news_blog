@@ -58,15 +58,15 @@ function makeCard(article) {
   const date = document.createElement("time"); date.dateTime = article.publishedAt;
   date.textContent = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(article.publishedAt));
   meta.append(date);
-  if (article.level) { const level = document.createElement("span"); level.textContent = article.level; meta.append(level); }
   const heading = document.createElement("h2"); heading.className = "article-card__title";
   const link = document.createElement("a"); link.className = "article-card__title-link";
   link.href = article.href || articleUrl(article.slug); link.textContent = article.title; heading.append(link);
   const summary = document.createElement("p"); summary.textContent = article.summary;
   const tags = document.createElement("ul"); tags.className = "tags"; tags.setAttribute("aria-label", "기사 태그");
   for (const value of article.tags || []) { const tag = document.createElement("li"); tag.className = "tag"; tag.textContent = value; tags.append(tag); }
-  const read = document.createElement("span"); read.className = "article-card__read"; read.setAttribute("aria-hidden", "true"); read.textContent = "기사 읽기 ↗";
-  body.append(meta, heading, summary, tags, read); item.append(media, body); return item;
+  const read = document.createElement("span"); read.className = "article-card__read"; read.setAttribute("aria-hidden", "true"); read.textContent = "읽으러 가기 →";
+  const footer = document.createElement("div"); footer.className = "article-card__footer"; footer.append(tags, read);
+  body.append(meta, heading, summary, footer); item.append(media, body); return item;
 }
 function setStatus(text, kind = "normal") { status.replaceChildren(document.createTextNode(text)); status.dataset.kind = kind; }
 function setPages(page, pageCount, state) {
@@ -122,7 +122,8 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     resultsList.setAttribute("aria-label", `보안 뉴스 목록 · ${state.page} / ${pageCount} 페이지`);
     emptyState.hidden = count !== 0;
     emptyState.textContent = catalog.length ? "다른 검색어를 입력하거나 검색어를 지워 전체 기사를 확인해 보세요." : "새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
-    setStatus(count === 0 ? (catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다.") : `${count}개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"}`);
+    const resultStatus = `${count}개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"} · ${state.page}페이지`;
+    setStatus(count === 0 ? `${resultStatus} · ${catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다."}` : resultStatus);
     setPages(state.page, pageCount, state); if (address) updateAddress(state, replaceAddress);
     if (moveToResults && count) {
       resultsList.focus({ preventScroll: true });

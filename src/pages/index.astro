@@ -17,7 +17,7 @@ const previousArticles = await Promise.all(ordered.slice(1, 7).map(articleCardDa
     <HomeHero articleHref={featured?.href} />
     <FeaturedArticle article={featured} />
     <section class="newsletter-previous" aria-labelledby="previous-articles-title">
-      <h2 id="previous-articles-title" class="sr-only">이전에 게시된 기사</h2>
+      <div class="home-section-heading"><h2 id="previous-articles-title">더 읽어볼까요?</h2></div>
       <ol class="article-list" id="newsletter-articles">{previousArticles.map((article) => <ArticleCard article={article} compact />)}</ol>
     </section>
   </main>

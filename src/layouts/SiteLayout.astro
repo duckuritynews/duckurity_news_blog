@@ -20,11 +20,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
   <body class:list={{ "page-home": Boolean(page), [`page-${page}`]: Boolean(page) }}>
     <a class="skip-link" href="#main">본문 바로가기</a>
     <header class="site-header" data-pagefind-ignore><div class="shell header-row">
-      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[32, 64, 96]} sizes="2rem" loading="eager" /><span>duckurity</span></a>
+      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[64, 128, 192]} sizes="4rem" loading="eager" /><span>duckurity</span></a>
       <nav class="site-nav" aria-label="사이트 탐색"><a href={siteUrl()} aria-current={page === "newsletter" ? "page" : undefined}>뉴스레터</a><a href={siteUrl("archive/")} aria-current={page === "archive" ? "page" : undefined}>아카이브</a><a href={siteUrl("about/")} aria-current={page === "about" ? "page" : undefined}>소개</a></nav>
-      {home.subscriptionUrl ? <a class="home-button header-subscribe" href={home.subscriptionUrl}>구독하기</a> : <button class="home-button header-subscribe" type="button" disabled>구독 준비 중</button>}
+      {home.subscriptionUrl ? <a class="home-button header-subscribe" href={home.subscriptionUrl}>구독하기</a> : <button class="home-button header-subscribe" type="button" disabled title="뉴스레터 구독 서비스 준비 중">구독하기</button>}
     </div></header>
     <slot />
-    <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row"><div><a class="brand" href={siteUrl()}>duckurity</a><p>복잡한 보안 이슈를 핵심부터 읽습니다.</p></div><a href={siteUrl("archive/")}>전체 기사 둘러보기 ↗</a></div></footer>
+    <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row"><a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[64, 128, 192]} sizes="4rem" loading="lazy" /><span>duckurity</span></a><p class="footer-description">복잡한 보안 이슈를 핵심부터 읽습니다.</p></div></footer>
   </body>
 </html>
