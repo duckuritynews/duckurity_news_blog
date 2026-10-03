@@ -10,8 +10,9 @@
 .site-header .brand { color: #000; font-size: calc(1.4rem + 6px); display: inline-flex; align-items: center; gap: .5rem; }
 .site-header .brand__logo { height: 1em; width: auto; flex-shrink: 0; }
 .site-footer .brand { color: #000; font-size: 1.4rem; display: inline-flex; align-items: center; min-height: 44px; }
-.site-nav { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; }
-.site-nav a { display: inline-flex; align-items: center; min-height: 44px; color: #000; text-decoration: none; font-weight: 650; }
+.site-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1.5rem; }
+.site-nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; color: #000; text-decoration: none; font-weight: 650; white-space: nowrap; overflow-wrap: normal; }
+.site-nav a + a::before { content: ""; position: absolute; inset-inline-start: calc(-.75rem - .5px); top: 50%; width: 1px; height: 1em; background: currentColor; transform: translateY(-50%); pointer-events: none; }
 .site-nav a[aria-current="page"], .site-nav a:hover, .site-nav a:focus-visible { text-decoration: underline; }
 .footer-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; padding-block: 1.5rem; }
 .footer-row p { margin: .35rem 0 0; }
@@ -88,7 +89,8 @@
 }
 @media (max-width: 48rem) {
   .site-header .header-row { gap: .75rem; }
-  .site-nav { order: 3; width: 100%; justify-content: space-between; gap: .25rem .75rem; }
+  .site-nav { order: 3; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-inline: min(12.5%, max(0px, calc((100% - 12rem) / 2))); gap: 0; }
+  .site-nav a + a::before { inset-inline-start: -.5px; }
   .header-subscribe { padding-inline: .9rem; }
   .home-hero, .home-feature__card { grid-template-columns: minmax(0, 1fr); }
   .home-hero__image { max-height: 20rem; }
