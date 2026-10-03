@@ -1,13 +1,17 @@
 ---
-import { articleUrl } from "../lib/urls";
-import type { ArticleEntry } from "../lib/articles";
-interface Props { article: ArticleEntry }
-const { article } = Astro.props;
-const date = new Date(article.data.publishedAt);
+import type { ArticleCardData } from "../lib/article-card-data";
+interface Props { article: ArticleCardData; compact?: boolean }
+const { article, compact = false } = Astro.props;
+const date = new Date(article.publishedAt);
+const Heading = compact ? "h3" : "h2";
 ---
-<li class="article-card">
-  <div class="card-meta"><time datetime={date.toISOString()}>{date.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time>{article.data.level && <span>{article.data.level}</span>}</div>
-  <h2><a href={articleUrl(article.data.slug)}>{article.data.title}</a></h2>
-  <p>{article.data.summary}</p>
-  <ul class="tags" aria-label="기사 태그">{article.data.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
+<li class:list={["article-card", { "article-card--compact": compact }]}>
+  <div class="article-card__media">{article.thumbnail ? <img {...article.thumbnail} loading="lazy" /> : <div class="home-image-slot" aria-hidden="true"><span>썸네일 준비 중</span></div>}</div>
+  <div class="article-card__body">
+    {!compact && <div class="card-meta"><time datetime={date.toISOString()}>{date.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</time>{article.level && <span>{article.level}</span>}</div>}
+    <Heading class="article-card__title"><a class="article-card__title-link" href={article.href}>{article.title}</a></Heading>
+    {!compact && <p>{article.summary}</p>}
+    <ul class="tags" aria-label="기사 태그">{article.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
+    {!compact && <span class="article-card__read" aria-hidden="true">기사 읽기 ↗</span>}
+  </div>
 </li>

@@ -8,11 +8,14 @@ import { sortArticles } from "../src/lib/article-sort.ts";
 
 // Exercise the shipped static files and client bundle without a browser dependency.
 const root = resolve(process.argv[2] || "dist");
-const html = readFileSync(join(root, "index.html"), "utf8");
+const newsletterHtml = readFileSync(join(root, "index.html"), "utf8");
+const html = readFileSync(join(root, "archive/index.html"), "utf8");
 const catalog = JSON.parse(html.match(/<script[^>]*id="article-catalog"[^>]*>(.*?)<\/script>/s)[1]);
 const pagefindPath = html.match(/data-pagefind-path="([^"]+)"/)[1];
 const base = pagefindPath.replace(/pagefind\/pagefind\.js$/, "");
 const origin = "https://static-test.invalid";
+const pageSize = 18;
+const archivePath = `${base}archive/`;
 const localFile = (url) => {
   const pathname = decodeURIComponent(new URL(url, origin).pathname);
   assert.ok(pathname.startsWith(base), `Missing site base: ${pathname}`);
@@ -37,6 +40,39 @@ function checkHtml(directory) {
   }
 }
 checkHtml(root);
+// Initial static cards and cards rebuilt by search use the same display data.
+const unescapeHtml = (value) => value.replace(/&(?:amp|lt|gt|quot|#39|#x27);/g, (entity) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&#x27;": "'" })[entity]);
+const staticCards = [...html.matchAll(/<li class="article-card">([\s\S]*?)(?=<li class="article-card">|<\/ol>)/g)];
+assert.equal(staticCards.length, Math.min(pageSize, catalog.length));
+for (const [index, card] of staticCards.entries()) {
+  const article = sortArticles(catalog, "latest")[index];
+  const title = card[1].match(/<a[^>]*class="article-card__title-link"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/s);
+  assert.ok(title, "Static card must expose its title link");
+  assert.equal(unescapeHtml(title[1]), article.href);
+  assert.equal(unescapeHtml(title[2]), article.title);
+  const image = card[1].match(/<img\b([^>]+)>/);
+  assert.equal(Boolean(image), Boolean(article.thumbnail));
+  if (article.thumbnail) {
+    const attrs = Object.fromEntries([...image[1].matchAll(/([a-z]+)="([^"]*)"/g)].map((match) => [match[1], unescapeHtml(match[2])]));
+    for (const key of ["src", "alt", "width", "height"]) assert.equal(attrs[key], String(article.thumbnail[key]));
+  }
+}
+assert.ok(existsSync(join(root, "about/index.html")));
+for (const id of ["article-controls", "article-search", "article-sort", "search-status", "newsletter"]) assert.ok(!newsletterHtml.includes(`id="${id}"`), `Archive/banner UI leaked into newsletter: ${id}`);
+assert.ok(newsletterHtml.includes("MR.DUCK&#39;S WEEKLY LETTER") || newsletterHtml.includes("MR.DUCK'S WEEKLY LETTER"));
+assert.ok(newsletterHtml.includes("이번 주 픽"));
+assert.ok(!newsletterHtml.includes("먼저 읽어볼 이야기"));
+const recent = [...newsletterHtml.matchAll(/<li class="article-card article-card--compact">([\s\S]*?)(?=<li class="article-card article-card--compact">|<\/ol>)/g)];
+const previousArticles = sortArticles(catalog, "latest").slice(1, 7);
+assert.equal(recent.length, previousArticles.length);
+recent.forEach((card, index) => {
+  const title = card[1].match(/class="article-card__title-link"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/s);
+  assert.equal(unescapeHtml(title[1]), previousArticles[index].href);
+  assert.equal(unescapeHtml(title[2]), previousArticles[index].title);
+  assert.ok(!card[1].includes('class="card-meta"') && !card[1].includes("<p>") && !card[1].includes('class="article-card__read"'));
+});
+const latest = sortArticles(catalog, "latest")[0];
+if (latest) assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));
 assert.ok(existsSync(join(root, "404.html")));
 const fragmentDir = join(root, "pagefind/fragment");
 const fragments = existsSync(fragmentDir) ? readdirSync(fragmentDir).map((file) => {
@@ -87,18 +123,26 @@ class Element {
   replaceChildren(...children) { this.text = ""; this.children = children; }
   setAttribute(key, value) { this.attributes[key] = value; }
   getAttribute(key) { return this.attributes[key]; }
+  querySelector(selector) {
+    for (const child of this.children) {
+      if (typeof child === "string") continue;
+      if ((selector.startsWith(".") && child.className?.split(/\s+/).includes(selector.slice(1))) || child.tag === selector) return child;
+      const nested = child.querySelector(selector); if (nested) return nested;
+    }
+    return null;
+  }
   addEventListener(event, callback) { (this.listeners[event] ||= []).push(callback); }
   fire(event, extra = {}) { for (const callback of this.listeners[event] || []) callback({ preventDefault() {}, ...extra }); }
   focusCount = 0; scrollCount = 0;
   focus() { this.focusCount++; }
   scrollIntoView() { this.scrollCount++; }
 }
-const ids = ["article-controls", "article-search", "article-sort", "article-results", "search-status", "empty-state", "pagination", "previous-page", "next-page", "page-status", "search-config", "article-catalog"];
+const ids = ["article-controls", "article-search", "article-sort", "view-cards", "view-list", "article-results", "search-status", "empty-state", "pagination", "previous-page", "next-page", "page-status", "search-config", "article-catalog"];
 const elements = Object.fromEntries(ids.map((id) => [id, new Element()]));
 elements["article-catalog"].textContent = JSON.stringify(catalog);
 elements["search-config"].dataset.pagefindPath = pagefindPath;
-const location = { pathname: base, search: "?sort=title&page=999" };
-const navigate = (_state, _title, url) => { const next = new URL(url, origin); location.pathname = next.pathname; location.search = next.search; };
+const location = { pathname: archivePath, search: "?sort=title&page=999", hash: "#article-archive" };
+const navigate = (_state, _title, url) => { const next = new URL(url, origin); location.pathname = next.pathname; location.search = next.search; location.hash = next.hash; };
 const window = new Element();
 const context = vm.createContext({
   document: { baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element(tag), createTextNode: (text) => String(text) },
@@ -122,28 +166,39 @@ async function settled() {
   }
   assert.fail("Client rendering timed out");
 }
-const cards = () => elements["article-results"].children.map((card) => card.children[1].children[0]);
+const cards = () => elements["article-results"].children.map((card) => card.querySelector(".article-card__title-link"));
 function expectCards(articles) {
   assert.deepEqual(cards().map((link) => link.textContent), articles.map((article) => article.title));
   for (const link of cards()) {
     assert.ok(link.href.startsWith(`${base}articles/`), `Wrong client article URL: ${link.href}`);
     assert.ok(existsSync(localFile(link.href)));
   }
+  elements["article-results"].children.forEach((card, index) => {
+    const image = card.querySelector("img");
+    const thumbnail = articles[index].thumbnail;
+    assert.equal(Boolean(image), Boolean(thumbnail));
+    if (thumbnail) {
+      for (const key of ["src", "alt", "width", "height"]) assert.equal(String(image.getAttribute(key)), String(thumbnail[key]));
+      assert.ok(existsSync(localFile(thumbnail.src)), `Broken thumbnail: ${thumbnail.src}`);
+      assert.ok(thumbnail.width > 0 && thumbnail.height > 0 && thumbnail.alt);
+    }
+  });
 }
 await settled();
-const lastPage = Math.max(1, Math.ceil(catalog.length / 10));
-expectCards(sortArticles(catalog, "title").slice((lastPage - 1) * 10));
+assert.equal(location.hash, "#article-archive", "Initial search must preserve the archive anchor");
+const lastPage = Math.max(1, Math.ceil(catalog.length / pageSize));
+expectCards(sortArticles(catalog, "title").slice((lastPage - 1) * pageSize));
 assert.equal(new URLSearchParams(location.search).get("page"), lastPage > 1 ? String(lastPage) : null);
 for (const sort of ["latest", "oldest", "title"]) {
   elements["article-sort"].value = sort; elements["article-sort"].fire("change"); await settled();
-  expectCards(sortArticles(catalog, sort).slice(0, 10));
-  if (catalog.length > 10) {
+  expectCards(sortArticles(catalog, sort).slice(0, pageSize));
+  if (catalog.length > pageSize) {
     elements["next-page"].fire("click"); await settled();
-    expectCards(sortArticles(catalog, sort).slice(10, 20));
+    expectCards(sortArticles(catalog, sort).slice(pageSize, pageSize * 2));
   }
 }
 location.search = "?sort=oldest"; window.fire("popstate"); await settled();
-expectCards(sortArticles(catalog, "oldest").slice(0, 10));
+expectCards(sortArticles(catalog, "oldest").slice(0, pageSize));
 if (catalog.length) {
   elements["article-search"].fire("compositionstart");
   elements["article-search"].value = catalog[0].title;
@@ -153,9 +208,10 @@ if (catalog.length) {
   for (const sort of ["latest", "oldest", "title"]) {
     elements["article-search"].value = "CVE-2026-12345";
     elements["article-sort"].value = sort; elements["article-controls"].fire("submit"); await settled();
-    expectCards(sortArticles(catalog.filter((article) => article.cveIds.includes("CVE-2026-12345")), sort).slice(0, 10));
+    expectCards(sortArticles(catalog.filter((article) => article.cveIds.includes("CVE-2026-12345")), sort).slice(0, pageSize));
   }
 }
 console.log(`Verified ${catalog.length} articles, ${checkedAssets} local references, real search index, client links, all sorts, pagination, URL restoration, and IME input (base: ${base}).`);
 const { verifyClientStates } = await import("./verify-client-states.mjs");
 await verifyClientStates({ source: readFileSync(localFile(scriptPath), "utf8"), catalog, pagefind, base, pagefindPath });
+await verifyClientStates({ source: readFileSync(localFile(scriptPath), "utf8"), catalog, pagefind, base, pagefindPath, initialView: "list" });

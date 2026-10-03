@@ -3,7 +3,7 @@ import vm from "node:vm";
 
 // Isolated DOM model for the shipped bundle: control failures and completion order,
 // without corrupting the real index or treating this as a native browser/IME test.
-export async function createClient({ source, catalog, base, pagefindPath, search, failImport = false }) {
+export async function createClient({ source, catalog, base, pagefindPath, search, failImport = false, initialView = "cards" }) {
   const effects = { focus: [], scroll: [], errors: [], reloads: 0 };
   class Element {
     children = []; dataset = {}; attributes = {}; listeners = {}; value = ""; hidden = false; text = "";
@@ -14,17 +14,25 @@ export async function createClient({ source, catalog, base, pagefindPath, search
     replaceChildren(...children) { this.text = ""; this.children = children; }
     setAttribute(key, value) { this.attributes[key] = String(value); }
     getAttribute(key) { return this.attributes[key]; }
+    querySelector(selector) {
+      for (const child of this.children) {
+        if (typeof child === "string") continue;
+        if (selector.startsWith(".") && child.className?.split(/\s+/).includes(selector.slice(1))) return child;
+        const nested = child.querySelector(selector); if (nested) return nested;
+      }
+      return null;
+    }
     addEventListener(event, callback) { (this.listeners[event] ||= []).push(callback); }
     fire(event, extra = {}) { for (const callback of this.listeners[event] || []) callback({ preventDefault() {}, ...extra }); }
     focus() { effects.focus.push(this.id); }
     scrollIntoView() { effects.scroll.push(this.id); }
   }
-  const ids = ["article-controls", "article-search", "article-sort", "article-results", "search-status", "empty-state", "pagination", "previous-page", "next-page", "page-status", "search-config", "article-catalog"];
+  const ids = ["article-controls", "article-search", "article-sort", "view-cards", "view-list", "article-results", "search-status", "empty-state", "pagination", "previous-page", "next-page", "page-status", "search-config", "article-catalog"];
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   elements["article-catalog"].textContent = JSON.stringify(catalog);
   elements["search-config"].dataset.pagefindPath = pagefindPath;
   elements["empty-state"].textContent = "아직 게시된 기사가 없습니다. 새 기사를 준비하고 있습니다.";
-  const location = { pathname: base, search: "", reload() { effects.reloads++; } };
+  const location = { pathname: `${base}archive/`, search: initialView === "list" ? "?view=list" : "", reload() { effects.reloads++; } };
   const origin = "https://static-test.invalid";
   const navigate = (_state, _title, url) => { location.search = new URL(url, origin).search; };
   const window = new Element(); window.location = location;
@@ -47,7 +55,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
   }
   const settled = () => until(() => !elements["search-status"].textContent.includes("중입니다"));
   const query = (value) => { elements["article-search"].value = value; elements["article-controls"].fire("submit"); };
-  const titles = () => elements["article-results"].children.map((card) => card.children[1].children[0].textContent);
+  const titles = () => elements["article-results"].children.map((card) => card.querySelector(".article-card__title-link").textContent);
   await settled();
   return { elements, effects, location, window, until, settled, query, titles };
 }
@@ -56,6 +64,8 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const nextTurn = () => new Promise((done) => setTimeout(done, 0));
 
 export async function verifyClientStates(options) {
+  const view = options.initialView ?? "cards";
+  const pageSize = view === "list" ? 20 : 18;
   const empty = await createClient({ ...options, catalog: [], search: () => { throw Error("Empty catalog must not load an index"); } });
   empty.query("anything"); await empty.settled();
   assert.match(empty.elements["search-status"].textContent, /아직 게시된 기사가 없습니다/);
@@ -75,7 +85,9 @@ export async function verifyClientStates(options) {
   assert.doesNotMatch(real.elements["empty-state"].textContent, /게시된 기사가 없/);
   assert.equal(real.titles().length, 0); assert.equal(calls, 0);
   real.query(""); await real.settled();
-  assert.equal(real.titles().length, Math.min(10, options.catalog.length));
+  assert.equal(real.titles().length, Math.min(pageSize, options.catalog.length));
+  assert.equal(real.elements["article-results"].dataset.view, view);
+  assert.equal(real.elements[`view-${view}`].getAttribute("aria-pressed"), "true");
   assert.match(real.elements["search-status"].textContent, new RegExp(`${options.catalog.length}개 결과`));
   assert.equal(real.elements["empty-state"].hidden, true);
 
@@ -87,8 +99,8 @@ export async function verifyClientStates(options) {
     real.elements["article-sort"].value = sort;
     const startCalls = calls, startData = dataCalls;
     real.query(commonQuery); await real.settled();
-    const pages = Math.max(1, Math.ceil(expectedTitles.length / 10));
-    assert.equal(dataCalls - startData, Math.min(10, expectedTitles.length));
+    const pages = Math.max(1, Math.ceil(expectedTitles.length / pageSize));
+    assert.equal(dataCalls - startData, Math.min(pageSize, expectedTitles.length));
     assert.equal(real.elements["page-status"].textContent, `1 / ${pages}`);
     const visited = [...real.titles()];
     for (let page = 2; page <= pages; page++) {
@@ -104,12 +116,36 @@ export async function verifyClientStates(options) {
     assert.equal(calls - startCalls, 1, "Page navigation must reuse the globally sorted result set");
     assert.equal(dataCalls - startData, expectedTitles.length);
     const focusBeforeHistory = real.effects.focus.length;
-    real.location.search = `?q=${encodeURIComponent(commonQuery)}&sort=${sort}`;
+    real.location.search = `?q=${encodeURIComponent(commonQuery)}&sort=${sort}&view=${view}`;
     real.window.fire("popstate"); await real.settled();
     assert.equal(real.effects.focus.length, focusBeforeHistory);
     assert.equal(dataCalls - startData, expectedTitles.length, "Returning to a loaded page must reuse its data");
-    console.log(`Search budget (${sort}): ${expectedTitles.length} matches; first page ${Math.min(10, expectedTitles.length)} data() calls; all pages ${dataCalls - startData}; search() calls ${calls - startCalls}.`);
+    console.log(`Search budget (${view}/${sort}): ${expectedTitles.length} matches; first page ${Math.min(pageSize, expectedTitles.length)} data() calls; all pages ${dataCalls - startData}; search() calls ${calls - startCalls}.`);
   }
+
+  const otherView = view === "cards" ? "list" : "cards";
+  const otherSize = otherView === "list" ? 20 : 18;
+  const callsBeforeView = calls, dataBeforeView = dataCalls;
+  real.elements[`view-${otherView}`].fire("click"); await real.settled();
+  assert.equal(real.elements["article-results"].dataset.view, otherView);
+  assert.equal(real.elements[`view-${otherView}`].getAttribute("aria-pressed"), "true");
+  const titleOrdered = await options.pagefind.search(commonQuery, { sort: { titleKoRank: "asc" } });
+  const titleNames = await Promise.all(titleOrdered.results.map(async (item) => (await item.data()).meta.title));
+  assert.deepEqual(real.titles(), titleNames.slice(0, otherSize));
+  assert.equal(calls, callsBeforeView, "View switching must reuse search results");
+  assert.equal(dataCalls, dataBeforeView, "Previously loaded pages must remain cached across view switching");
+  assert.equal(new URLSearchParams(real.location.search).get("page"), null, "View switching resets the page");
+  if (titleNames.length > otherSize) {
+    real.elements["next-page"].fire("click"); await real.settled();
+    assert.deepEqual(real.titles(), titleNames.slice(otherSize, otherSize * 2));
+    assert.equal(new URLSearchParams(real.elements["next-page"].href.split("?")[1]).get("view"), otherView === "list" ? "list" : null);
+  }
+  const focusBeforeViewHistory = real.effects.focus.length;
+  real.location.search = `?q=${encodeURIComponent(commonQuery)}&sort=title&view=${view}&page=2`;
+  real.window.fire("popstate"); await real.settled();
+  assert.equal(real.elements["article-results"].dataset.view, view);
+  assert.equal(real.elements[`view-${view}`].getAttribute("aria-pressed"), "true");
+  assert.equal(real.effects.focus.length, focusBeforeViewHistory);
 
   const countBeforeIme = calls, focusBeforeIme = real.effects.focus.length;
   real.elements["article-search"].fire("compositionstart");
@@ -137,7 +173,7 @@ export async function verifyClientStates(options) {
   const retry = controlled.elements["search-status"].children.find((child) => typeof child !== "string");
   assert.equal(retry.textContent, "다시 시도"); retry.fire("click"); assert.equal(controlled.effects.reloads, 1);
   controlled.query(""); await controlled.settled(); assert.equal(controlled.effects.errors.length, 1);
-  assert.equal(controlled.titles().length, Math.min(10, options.catalog.length));
+  assert.equal(controlled.titles().length, Math.min(pageSize, options.catalog.length));
 
   const missingModule = await createClient({ ...options, failImport: true });
   missingModule.query("load failure"); await missingModule.settled();
@@ -154,20 +190,21 @@ export async function verifyClientStates(options) {
   assert.equal(controlled.effects.focus.length, 0);
 
   // A larger isolated catalog exercises overlapping page-data requests, not just search().
-  const many = Array.from({ length: 25 }, (_, i) => ({ ...options.catalog[0], slug: `isolated-${i}`, title: `Isolated ${i}`, latestRank: i, oldestRank: 24 - i, titleKoRank: i }));
+  const count = pageSize * 2 + 5;
+  const many = Array.from({ length: count }, (_, i) => ({ ...options.catalog[0], slug: `isolated-${i}`, title: `Isolated ${i}`, latestRank: i, oldestRank: count - 1 - i, titleKoRank: i }));
   const loads = new Map();
   const racing = await createClient({ ...options, catalog: many, search: async () => ({ results: many.map((article, i) => ({ id: String(i), data: () => {
     const task = deferred(); loads.set(i, task); return task.promise;
   } })) }) });
   const release = (from, to) => { for (let i = from; i < to; i++) loads.get(i).resolve({ meta: { articleSlug: many[i].slug } }); };
-  racing.query("all"); await racing.until(() => loads.has(9)); release(0, 10); await racing.settled();
-  racing.elements["next-page"].fire("click"); await racing.until(() => loads.has(19));
-  racing.elements["next-page"].fire("click"); await racing.until(() => loads.has(24));
-  release(20, 25); await racing.settled();
-  assert.deepEqual(racing.titles(), many.slice(20).map((a) => a.title));
+  racing.query("all"); await racing.until(() => loads.has(pageSize - 1)); release(0, pageSize); await racing.settled();
+  racing.elements["next-page"].fire("click"); await racing.until(() => loads.has(pageSize * 2 - 1));
+  racing.elements["next-page"].fire("click"); await racing.until(() => loads.has(count - 1));
+  release(pageSize * 2, count); await racing.settled();
+  assert.deepEqual(racing.titles(), many.slice(pageSize * 2).map((a) => a.title));
   assert.equal(racing.effects.focus.length, 1);
-  release(10, 20); await nextTurn();
-  assert.deepEqual(racing.titles(), many.slice(20).map((a) => a.title));
+  release(pageSize, pageSize * 2); await nextTurn();
+  assert.deepEqual(racing.titles(), many.slice(pageSize * 2).map((a) => a.title));
   assert.equal(racing.effects.focus.length, 1);
   assert.equal(racing.elements["page-status"].textContent, "3 / 3");
   // Starting IME composition also invalidates a pending page's focus request.

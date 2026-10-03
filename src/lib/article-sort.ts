@@ -1,4 +1,7 @@
 export type ArticleSort = "latest" | "oldest" | "title";
+export type ArchiveView = "cards" | "list";
+export const archivePageSizes = { cards: 18, list: 20 } as const;
+export function normalizeView(value: string | null | undefined): ArchiveView { return value === "list" ? "list" : "cards"; }
 
 export interface SortableArticle {
   slug: string;

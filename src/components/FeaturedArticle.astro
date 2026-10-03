@@ -1,0 +1,20 @@
+---
+import type { ArticleCardData } from "../lib/article-card-data";
+interface Props { article?: ArticleCardData | undefined }
+const { article } = Astro.props;
+---
+<section class="home-feature" aria-labelledby="featured-title">
+  <div class="home-section-heading"><h2 id="featured-title">이번 주 픽</h2></div>
+  {article ? <article><a class="home-feature__card" href={article.href} aria-labelledby="featured-article-title">
+    <div class="home-feature__image">
+      {article.thumbnail ? <img {...article.thumbnail} loading="lazy" /> : <div class="home-image-slot" aria-hidden="true"><span>대표 이미지 준비 중</span></div>}
+    </div>
+    <div class="home-feature__copy">
+      <span class="home-badge">최근 공개 글</span>
+      <h3 id="featured-article-title">{article.title}</h3>
+      <p>{article.summary}</p>
+      <time datetime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time>
+      <span class="home-feature__arrow" aria-hidden="true">↗</span>
+    </div>
+  </a></article> : <p class="empty-state">아직 게시된 기사가 없습니다.</p>}
+</section>

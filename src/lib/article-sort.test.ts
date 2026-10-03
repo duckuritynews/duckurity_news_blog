@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assignSortRanks, paginate, sortArticles, type SortableArticle } from "./article-sort.ts";
+import { assignSortRanks, paginate, sortArticles, archivePageSizes, normalizeView, type SortableArticle } from "./article-sort.ts";
 import { exactCveMatches, extractCveIds } from "./search.ts";
 
 const articles: [SortableArticle, SortableArticle, SortableArticle, SortableArticle, SortableArticle] = [
@@ -10,6 +10,17 @@ const articles: [SortableArticle, SortableArticle, SortableArticle, SortableArti
   { slug: "delta", title: "Delta", publishedAt: "2026-01-02T00:00:00Z" },
   { slug: "epsilon", title: "Echo", publishedAt: "2026-01-02T00:00:00Z" },
 ];
+test("archive pages cap cards at 18 and list rows at 20", () => {
+  assert.equal(archivePageSizes.cards, 18);
+  assert.equal(archivePageSizes.list, 20);
+  const items = Array.from({ length: 42 }, (_, index) => index);
+  for (const [view, counts] of [["cards", [18, 18, 6]], ["list", [20, 20, 2]]] as const) {
+    assert.deepEqual([1, 2, 3].map((page) => paginate(items, page, archivePageSizes[view]).items.length), counts);
+    assert.deepEqual([1, 2, 3].flatMap((page) => paginate(items, page, archivePageSizes[view]).items), items);
+  }
+  assert.equal(normalizeView("list"), "list");
+  for (const value of [null, undefined, "cards", "unknown"]) assert.equal(normalizeView(value), "cards");
+});
 
 test("latest and oldest sort dates with stable slug ties", () => {
   assert.deepEqual(sortArticles(articles, "latest").map(({ slug }) => slug), [

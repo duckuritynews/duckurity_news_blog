@@ -1,8 +1,12 @@
 ---
 import "../styles/global.css";
+import "../styles/home.css";
 import { siteUrl } from "../lib/urls";
-interface Props { title: string; description: string }
-const { title, description } = Astro.props;
+import { home } from "../config/home";
+import { Image } from "astro:assets";
+import faceLogo from "../assets/brand/미스터덕_블로그_01_얼굴로고_2D.png";
+interface Props { title: string; description: string; page?: "newsletter" | "archive" | "about" }
+const { title, description, page } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 ---
 <!doctype html>
@@ -10,13 +14,17 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
   <head>
     <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} /><link rel="canonical" href={canonical} />
-    <slot name="head" /><link rel="icon" href={siteUrl("favicon.svg")} type="image/svg+xml" />
-    <meta name="theme-color" content="#006d67" /><title>{title}</title>
+    <slot name="head" /><link rel="icon" href={siteUrl("favicon.webp")} type="image/webp" />
+    <meta name="theme-color" content="#ffffff" /><title>{title}</title>
   </head>
-  <body>
+  <body class:list={{ "page-home": Boolean(page), [`page-${page}`]: Boolean(page) }}>
     <a class="skip-link" href="#main">본문 바로가기</a>
-    <header class="site-header" data-pagefind-ignore><div class="shell header-row"><a class="brand" href={siteUrl()}>Duckurity 뉴스</a><span class="header-note">Security Briefing</span></div></header>
+    <header class="site-header" data-pagefind-ignore><div class="shell header-row">
+      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[32, 64, 96]} sizes="2rem" loading="eager" /><span>duckurity</span></a>
+      <nav class="site-nav" aria-label="사이트 탐색"><a href={siteUrl()} aria-current={page === "newsletter" ? "page" : undefined}>뉴스레터</a><a href={siteUrl("archive/")} aria-current={page === "archive" ? "page" : undefined}>아카이브</a><a href={siteUrl("about/")} aria-current={page === "about" ? "page" : undefined}>소개</a></nav>
+      {home.subscriptionUrl ? <a class="home-button header-subscribe" href={home.subscriptionUrl}>구독하기</a> : <button class="home-button header-subscribe" type="button" disabled>구독 준비 중</button>}
+    </div></header>
     <slot />
-    <footer class="site-footer" data-pagefind-ignore><div class="shell">복잡한 보안 이슈를 핵심부터 읽습니다.</div></footer>
+    <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row"><div><a class="brand" href={siteUrl()}>duckurity</a><p>복잡한 보안 이슈를 핵심부터 읽습니다.</p></div><a href={siteUrl("archive/")}>전체 기사 둘러보기 ↗</a></div></footer>
   </body>
 </html>
