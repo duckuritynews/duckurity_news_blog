@@ -15,10 +15,10 @@ const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
 <SiteLayout title="아카이브 | Duckurity 뉴스" description="기사를 검색하고 최신순, 오래된순, 가나다순으로 찾아보세요." page="archive">
   <main id="main" class="site-main shell">
     <section class="home-archive" id="article-archive" aria-labelledby="archive-title">
-      <div class="home-section-heading"><h1 id="archive-title">전체 글</h1></div>
+      <div class="home-section-heading"><h1 id="archive-title">아카이브</h1></div>
       <div class="home-categories" aria-label="기사 분류 준비 상태"><span class="home-category home-category--selected">전체</span>{["보안 이슈", "취약점", "개인정보", "보안 습관"].map((label) => <button class="home-category" type="button" disabled>{label}</button>)}</div>
       <form class="controls" id="article-controls" role="search" action={siteUrl("archive/")}>
-        <label class="search-field" for="article-search"><span class="sr-only">통합 검색</span><input id="article-search" name="q" type="search" placeholder="통합 검색 ㅣ 제목, 본문, 태그" autocomplete="off" /></label>
+        <label class="search-field" for="article-search"><span class="sr-only">통합 검색</span><input id="article-search" name="q" type="search" placeholder="통합 검색 ㅣ 제목, 본문, 키워드" autocomplete="off" /></label>
         <div class="control-row"><label class="sort-field" for="article-sort">정렬<select id="article-sort" name="sort"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select></label><button class="button" type="submit">검색</button></div>
       </form>
       <div class="archive-results-toolbar">
