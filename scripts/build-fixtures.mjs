@@ -59,7 +59,13 @@ try {
       "```js", "const sample = [\"Korean\", \"English\", \"CVE-2026-12345\"];", "console.log(sample.join(\" \\u00b7 \"));", "```", "",
       "A deliberately long link: https://example.org/security/research/example/path/with/many/segments/that-should-wrap-on-a-narrow-mobile-viewport-without-horizontal-page-overflow.", ""
     ].join("\n");
-    if (i === 0) body += "\n" + "Extended sample paragraph used to check the reading width, line height, and the transition from key points into article prose. ".repeat(18);
+    if (i === 0) {
+      const images = join(fixtureRoot, slug, "images"); mkdirSync(images, { recursive: true });
+      writeFileSync(join(images, "cover.svg"), svg(960, 504, "#17635f", "Explicit cover"), "utf8");
+      writeFileSync(join(images, "first.svg"), svg(320, 900, "#69518c", "First body image"), "utf8");
+      // The latest article must use its first body image even with a different explicit cover.
+      body += "\n![First body image](./images/first.svg)\n" + "Extended sample paragraph used to check the reading width, line height, and the transition from key points into article prose. ".repeat(18);
+    }
     if (i === 11) {
       const images = join(fixtureRoot, slug, "images"); mkdirSync(images, { recursive: true });
       writeFileSync(join(images, "landscape.svg"), svg(900, 320, "#17635f", "Landscape"), "utf8");
@@ -73,7 +79,7 @@ try {
       body += "\n### Image aspect ratio fixtures\n\n![Landscape sample](./images/landscape.svg)\n\n![Portrait sample](./images/portrait.svg)\n\n![Square sample](./images/square.svg)\n";
     }
     body += "\n## References\n\n- Synthetic fixture source: temporary local preview\n- Checked: 2026-09-30\n";
-    const coverFields = i === 11 ? ["cover: ./images/landscape.svg", "coverAlt: Synthetic landscape thumbnail"] : [];
+    const coverFields = i === 0 ? ["cover: ./images/cover.svg", "coverAlt: Explicit featured cover"] : i === 11 ? ["cover: ./images/landscape.svg", "coverAlt: Synthetic landscape thumbnail"] : [];
     const frontmatter = ["---", `slug: ${json(slug)}`, `title: ${json(titles[i])}`, `summary: ${json(summary)}`, `publishedAt: ${json(publishedAt)}`, "draft: false", `authors: ${json(["Duckurity UI fixture"])}`, `tags: ${json(tags[i])}`, `keyPoints: ${json(keyPoints)}`, `level: ${json(i % 2 ? "\uC911\uAE09" : "\uCD08\uAE09")}`, `searchAliases: ${json([`fixture-${i + 1}`])}`, `cveIds: ${json(cveIds)}`, ...coverFields, "---", ""].join("\n");
     const articleDir = join(fixtureRoot, slug); mkdirSync(articleDir, { recursive: true });
     writeFileSync(join(articleDir, "index.md"), frontmatter + body, "utf8");

@@ -4,12 +4,13 @@ import ArticleCard from "../components/ArticleCard.astro";
 import HomeHero from "../components/HomeHero.astro";
 import FeaturedArticle from "../components/FeaturedArticle.astro";
 import { articleCardData } from "../lib/article-card-data";
+import { featuredArticleData } from "../lib/featured-article-data";
 import { getCollection } from "astro:content";
 import { getPublicArticles, orderPublicArticles } from "../lib/articles";
 
 const ordered = orderPublicArticles(getPublicArticles(await getCollection("articles")), "latest");
 const latest = ordered[0];
-const featured = latest ? await articleCardData(latest) : undefined;
+const featured = latest ? await featuredArticleData(latest) : undefined;
 const previousArticles = await Promise.all(ordered.slice(1, 7).map(articleCardData));
 ---
 <SiteLayout title="뉴스레터 | Duckurity 뉴스" description="이번 주 보안 소식과 이전에 게시된 이야기를 만나보세요." page="newsletter">

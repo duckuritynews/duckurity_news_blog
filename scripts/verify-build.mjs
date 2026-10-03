@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { gunzipSync } from "node:zlib";
 import { sortArticles } from "../src/lib/article-sort.ts";
+import { firstImageFromHtml } from "../src/lib/first-image.ts";
 
 // Exercise the shipped static files and client bundle without a browser dependency.
 const root = resolve(process.argv[2] || "dist");
@@ -72,7 +73,13 @@ recent.forEach((card, index) => {
   assert.ok(!card[1].includes('class="card-meta"') && !card[1].includes("<p>") && !card[1].includes('class="article-card__read"'));
 });
 const latest = sortArticles(catalog, "latest")[0];
-if (latest) assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));
+if (latest) {
+  assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));
+  const detailHtml = readFileSync(localFile(latest.href), "utf8");
+  const proseHtml = detailHtml.match(/class="prose"[^>]*>([\s\S]*?)<footer class="sources"/)[1];
+  const featuredHtml = newsletterHtml.match(/class="home-feature__image">([\s\S]*?)<div class="home-feature__copy"/)[1];
+  assert.deepEqual(firstImageFromHtml(featuredHtml), firstImageFromHtml(proseHtml), "Featured image must use the first displayed body image, regardless of cover");
+}
 assert.ok(existsSync(join(root, "404.html")));
 const fragmentDir = join(root, "pagefind/fragment");
 const fragments = existsSync(fragmentDir) ? readdirSync(fragmentDir).map((file) => {
