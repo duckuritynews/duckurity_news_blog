@@ -1,5 +1,7 @@
 ---
 import { home } from "../config/home";
+import { Image } from "astro:assets";
+import shieldMascot from "../assets/brand/미스터덕_블로그_02_메인방패_2D.png";
 interface Props { articleHref?: string | undefined }
 const { articleHref } = Astro.props;
 ---
@@ -13,5 +15,5 @@ const { articleHref } = Astro.props;
       {home.subscriptionUrl ? <a class="home-button home-button--outline" href={home.subscriptionUrl}>뉴스레터 구독</a> : <button class="home-button home-button--outline" type="button" disabled title="뉴스레터 구독 서비스 준비 중">뉴스레터 구독</button>}
     </div>
   </div>
-  <div class="home-image-slot home-hero__image" aria-hidden="true"><span>마스코트 이미지 준비 중</span></div>
+  <div class="home-image-slot home-hero__image"><Image src={shieldMascot} alt="방패를 들고 있는 미스터덕 마스코트" widths={[320, 640, 960]} sizes="(min-width: 48.001rem) 26rem, 20rem" loading="eager" /></div>
 </section>
