@@ -102,6 +102,7 @@ export async function verifyClientStates(options) {
     const pages = Math.max(1, Math.ceil(expectedTitles.length / pageSize));
     assert.equal(dataCalls - startData, Math.min(pageSize, expectedTitles.length));
     assert.equal(real.elements["page-status"].textContent, `1 / ${pages}`);
+    assert.match(real.elements["search-status"].textContent, / · 1페이지$/);
     const visited = [...real.titles()];
     for (let page = 2; page <= pages; page++) {
       const focused = real.effects.focus.length;
@@ -110,6 +111,7 @@ export async function verifyClientStates(options) {
       assert.equal(real.effects.focus.at(-1), "article-results");
       assert.equal(real.effects.scroll.length, real.effects.focus.length);
       assert.equal(real.elements["page-status"].textContent, `${page} / ${pages}`);
+      assert.ok(real.elements["search-status"].textContent.endsWith(` · ${page}페이지`), "Result status must follow the current page");
       visited.push(...real.titles());
     }
     assert.deepEqual(visited, expectedTitles);
