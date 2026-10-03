@@ -14,7 +14,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
   <head>
     <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} /><link rel="canonical" href={canonical} />
-    <slot name="head" /><link rel="icon" href={siteUrl("favicon.svg")} type="image/svg+xml" />
+    <slot name="head" /><link rel="icon" href={siteUrl("favicon.webp")} type="image/webp" />
     <meta name="theme-color" content="#ffffff" /><title>{title}</title>
   </head>
   <body class:list={{ "page-home": Boolean(page), [`page-${page}`]: Boolean(page) }}>
