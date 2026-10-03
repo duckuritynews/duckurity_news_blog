@@ -25,6 +25,11 @@ const tags = [
   ["\uD45C", "\uCF54\uB4DC", "\uBD84\uC11D"], ["\uC774\uBBF8\uC9C0", "\uBAA8\uBC14\uC77C"],
   ["\uAE34 \uD0DC\uADF8: \uC81C\uBAA9\uACFC \uBCF8\uBB38\uC5D0\uC11C \uC77D\uAE30 \uC88B\uC740 \uC774\uB984", "\uAC80\uC0C9", "\uBCF4\uC548"], ["\uC774\uBBF8\uC9C0", "\uD14C\uC2A4\uD2B8"]
 ];
+// Enough articles to cross both 18-card and 20-row boundaries through page three.
+for (let index = titles.length; index < 42; index++) {
+  titles.push(`추가 검증 기사 ${index + 1}: 검색과 보기 전환`);
+  tags.push(["보안", "추가 검증"]);
+}
 const json = (value) => JSON.stringify(value);
 const svg = (w, h, fill, label) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="${fill}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="sans-serif" font-size="24">${label}</text></svg>`;
 
@@ -68,13 +73,15 @@ try {
       body += "\n### Image aspect ratio fixtures\n\n![Landscape sample](./images/landscape.svg)\n\n![Portrait sample](./images/portrait.svg)\n\n![Square sample](./images/square.svg)\n";
     }
     body += "\n## References\n\n- Synthetic fixture source: temporary local preview\n- Checked: 2026-09-30\n";
-    const frontmatter = ["---", `slug: ${json(slug)}`, `title: ${json(titles[i])}`, `summary: ${json(summary)}`, `publishedAt: ${json(publishedAt)}`, "draft: false", `authors: ${json(["Duckurity UI fixture"])}`, `tags: ${json(tags[i])}`, `keyPoints: ${json(keyPoints)}`, `level: ${json(i % 2 ? "\uC911\uAE09" : "\uCD08\uAE09")}`, `searchAliases: ${json([`fixture-${i + 1}`])}`, `cveIds: ${json(cveIds)}`, "---", ""].join("\n");
+    const coverFields = i === 11 ? ["cover: ./images/landscape.svg", "coverAlt: Synthetic landscape thumbnail"] : [];
+    const frontmatter = ["---", `slug: ${json(slug)}`, `title: ${json(titles[i])}`, `summary: ${json(summary)}`, `publishedAt: ${json(publishedAt)}`, "draft: false", `authors: ${json(["Duckurity UI fixture"])}`, `tags: ${json(tags[i])}`, `keyPoints: ${json(keyPoints)}`, `level: ${json(i % 2 ? "\uC911\uAE09" : "\uCD08\uAE09")}`, `searchAliases: ${json([`fixture-${i + 1}`])}`, `cveIds: ${json(cveIds)}`, ...coverFields, "---", ""].join("\n");
     const articleDir = join(fixtureRoot, slug); mkdirSync(articleDir, { recursive: true });
     writeFileSync(join(articleDir, "index.md"), frontmatter + body, "utf8");
     if (i === 11) {
       for (const [name, metadata] of [["unpublished-draft", "draft: true"], ["unpublished-future", 'publishedAt: "2999-01-01T00:00:00Z"']]) {
         const hiddenDir = join(fixtureRoot, name); mkdirSync(hiddenDir, { recursive: true });
         const hiddenFrontmatter = frontmatter.replace(`slug: ${json(slug)}`, `slug: ${json(name)}`)
+          .replace(/^cover(?:Alt)?:.*\n/gm, "")
           .replace(name === "unpublished-draft" ? "draft: false" : `publishedAt: ${json(publishedAt)}`, metadata);
         writeFileSync(join(hiddenDir, "index.md"), hiddenFrontmatter + "Unpublished fixture.", "utf8");
       }

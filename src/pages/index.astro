@@ -1,52 +1,24 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import ArticleCard from "../components/ArticleCard.astro";
+import HomeHero from "../components/HomeHero.astro";
+import FeaturedArticle from "../components/FeaturedArticle.astro";
+import { articleCardData } from "../lib/article-card-data";
 import { getCollection } from "astro:content";
-import { articleRanks, getPublicArticles, orderPublicArticles } from "../lib/articles";
-import { normalizeSort, paginate } from "../lib/article-sort";
-import { siteUrl } from "../lib/urls";
-import { extractCveIds } from "../lib/search";
+import { getPublicArticles, orderPublicArticles } from "../lib/articles";
 
-const entries = getPublicArticles(await getCollection("articles"));
-const sort = normalizeSort(Astro.url.searchParams.get("sort"));
-const requestedPage = Number(Astro.url.searchParams.get("page") ?? "1");
-const ordered = orderPublicArticles(entries, sort);
-const page = paginate(ordered, requestedPage);
-const ranks = articleRanks(entries);
-const catalog = entries.map(({ data, body }) => ({
-  slug: data.slug, title: data.title, summary: data.summary, publishedAt: data.publishedAt,
-  tags: data.tags, authors: data.authors, level: data.level ?? "", cveIds: [...new Set([...data.cveIds.map((id) => id.toUpperCase()), ...extractCveIds(body ?? "", data.title, data.summary, ...data.tags, ...(data.searchAliases ?? []))])],
-  latestRank: ranks.get(data.slug)!.latestRank, oldestRank: ranks.get(data.slug)!.oldestRank,
-  titleKoRank: ranks.get(data.slug)!.titleKoRank,
-}));
-const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
+const ordered = orderPublicArticles(getPublicArticles(await getCollection("articles")), "latest");
+const latest = ordered[0];
+const featured = latest ? await articleCardData(latest) : undefined;
+const previousArticles = await Promise.all(ordered.slice(1, 7).map(articleCardData));
 ---
-<SiteLayout title="Duckurity 뉴스 | 보안 뉴스 브리핑" description="사이버 보안 뉴스를 핵심부터 읽는 한국어 보안 브리핑입니다.">
+<SiteLayout title="뉴스레터 | Duckurity 뉴스" description="이번 주 보안 소식과 이전에 게시된 이야기를 만나보세요." page="newsletter">
   <main id="main" class="site-main shell">
-    <section class="intro" aria-labelledby="page-title">
-      <span class="eyebrow">Duckurity · Security Briefing</span>
-      <h1 id="page-title">복잡한 보안 이슈,<br />핵심부터 읽기</h1>
-      <p>새로운 위협과 취약점을 맥락과 함께 전합니다.</p>
+    <HomeHero articleHref={featured?.href} />
+    <FeaturedArticle article={featured} />
+    <section class="newsletter-previous" aria-labelledby="previous-articles-title">
+      <h2 id="previous-articles-title" class="sr-only">이전에 게시된 기사</h2>
+      <ol class="article-list" id="newsletter-articles">{previousArticles.map((article) => <ArticleCard article={article} compact />)}</ol>
     </section>
-    <form class="controls" id="article-controls" role="search" action={siteUrl()}>
-      <label class="search-field" for="article-search">통합 검색
-        <input id="article-search" name="q" type="search" placeholder="제목, 본문, 태그 검색" autocomplete="off" />
-      </label>
-      <div class="control-row"><label class="sort-field" for="article-sort">정렬
-        <select id="article-sort" name="sort"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select>
-      </label><button class="button" type="submit">검색</button></div>
-    </form>
-    <p id="search-status" class="status" role="status" aria-live="polite">{entries.length ? `전체 기사 ${entries.length}개 · 최신순` : "아직 게시된 기사가 없습니다."}</p>
-    <div id="empty-state" class="empty-state" hidden={entries.length > 0}>새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.</div>
-    <noscript><p class="noscript-note">Article links remain available without JavaScript. Full-text search, sorting, and pagination require JavaScript.</p></noscript>
-    <ol class="article-list" id="article-results" aria-label="보안 뉴스 목록" tabindex="-1">{ordered.map((article) => <ArticleCard article={article} />)}</ol>
-    <nav class="pagination" id="pagination" aria-label="기사 목록 페이지" hidden>
-      <a class="page-link" id="previous-page" href={`?${new URLSearchParams({ sort, page: String(Math.max(1, page.page - 1)) })}`} aria-disabled={page.page <= 1 ? "true" : "false"}>이전</a>
-      <span id="page-status">{page.page} / {page.pageCount}</span>
-      <a class="page-link" id="next-page" href={`?${new URLSearchParams({ sort, page: String(Math.min(page.pageCount, page.page + 1)) })}`} aria-disabled={page.page >= page.pageCount ? "true" : "false"}>다음</a>
-    </nav>
-    <script type="application/json" id="article-catalog" set:html={safeCatalog}></script>
-    <div id="search-config" data-pagefind-path={siteUrl("pagefind/pagefind.js")} hidden></div>
-    <script>import "../scripts/search-client.js";</script>
   </main>
 </SiteLayout>

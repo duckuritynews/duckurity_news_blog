@@ -1,9 +1,12 @@
 import { exactCveMatches } from "../lib/search.ts";
 import { articleUrl } from "../lib/urls";
+import { archivePageSizes, normalizeView } from "../lib/article-sort.ts";
 
 const form = document.querySelector("#article-controls");
 const input = document.querySelector("#article-search");
 const sortControl = document.querySelector("#article-sort");
+const cardsControl = document.querySelector("#view-cards");
+const listControl = document.querySelector("#view-list");
 const resultsList = document.querySelector("#article-results");
 const status = document.querySelector("#search-status");
 const emptyState = document.querySelector("#empty-state");
@@ -16,7 +19,6 @@ const catalogElement = document.querySelector("#article-catalog");
 const catalog = JSON.parse(catalogElement?.textContent || "[]");
 const catalogBySlug = new Map(catalog.map((article) => [article.slug, article]));
 const basePath = new URL(config?.dataset.pagefindPath || "./", document.baseURI);
-const pageSize = 10;
 let pagefind;
 let activeRequest = 0;
 let composing = false;
@@ -27,34 +29,48 @@ function queryState() {
   const params = new URLSearchParams(location.search);
   const sort = ["latest", "oldest", "title"].includes(params.get("sort")) ? params.get("sort") : "latest";
   const requestedPage = Number(params.get("page") || "1");
-  return { query: params.get("q") || "", sort, page: Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1 };
+  return { query: params.get("q") || "", sort, view: normalizeView(params.get("view")), page: Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1 };
 }
 function rankField(sort) { return sort === "oldest" ? "oldestRank" : sort === "title" ? "titleKoRank" : "latestRank"; }
 function sortedCatalog(sort) { const key = rankField(sort); return [...catalog].sort((a, b) => a[key] - b[key]); }
-function updateAddress({ query, sort, page }, replace = false) {
+function homeAnchor() { return ["#article-archive", "#main"].includes(location.hash) ? location.hash : ""; }
+function updateAddress({ query, sort, page, view }, replace = false) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (sort !== "latest") params.set("sort", sort);
   if (page > 1) params.set("page", String(page));
-  history[replace ? "replaceState" : "pushState"]({}, "", `${location.pathname}${params.size ? `?${params}` : ""}`);
+  if (view === "list") params.set("view", view);
+  history[replace ? "replaceState" : "pushState"]({}, "", `${location.pathname}${params.size ? `?${params}` : ""}${homeAnchor()}`);
 }
 function makeCard(article) {
   const item = document.createElement("li"); item.className = "article-card";
+  const media = document.createElement("div"); media.className = "article-card__media";
+  if (article.thumbnail) {
+    const image = document.createElement("img");
+    for (const key of ["src", "width", "height", "alt"]) image.setAttribute(key, article.thumbnail[key]);
+    image.setAttribute("loading", "lazy"); media.append(image);
+  } else {
+    const placeholder = document.createElement("div"); placeholder.className = "home-image-slot"; placeholder.setAttribute("aria-hidden", "true");
+    const caption = document.createElement("span"); caption.textContent = "썸네일 준비 중"; placeholder.append(caption); media.append(placeholder);
+  }
+  const body = document.createElement("div"); body.className = "article-card__body";
   const meta = document.createElement("div"); meta.className = "card-meta";
   const date = document.createElement("time"); date.dateTime = article.publishedAt;
   date.textContent = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(article.publishedAt));
   meta.append(date);
   if (article.level) { const level = document.createElement("span"); level.textContent = article.level; meta.append(level); }
-  const heading = document.createElement("h2"); const link = document.createElement("a");
-  link.href = articleUrl(article.slug); link.textContent = article.title; heading.append(link);
+  const heading = document.createElement("h2"); heading.className = "article-card__title";
+  const link = document.createElement("a"); link.className = "article-card__title-link";
+  link.href = article.href || articleUrl(article.slug); link.textContent = article.title; heading.append(link);
   const summary = document.createElement("p"); summary.textContent = article.summary;
   const tags = document.createElement("ul"); tags.className = "tags"; tags.setAttribute("aria-label", "기사 태그");
   for (const value of article.tags || []) { const tag = document.createElement("li"); tag.className = "tag"; tag.textContent = value; tags.append(tag); }
-  item.append(meta, heading, summary, tags); return item;
+  const read = document.createElement("span"); read.className = "article-card__read"; read.setAttribute("aria-hidden", "true"); read.textContent = "기사 읽기 ↗";
+  body.append(meta, heading, summary, tags, read); item.append(media, body); return item;
 }
 function setStatus(text, kind = "normal") { status.replaceChildren(document.createTextNode(text)); status.dataset.kind = kind; }
 function setPages(page, pageCount, state) {
-  const href = (number) => { const params = new URLSearchParams(); if (state.query) params.set("q", state.query); if (state.sort !== "latest") params.set("sort", state.sort); if (number > 1) params.set("page", String(number)); return `${location.pathname}${params.size ? `?${params}` : ""}`; };
+  const href = (number) => { const params = new URLSearchParams(); if (state.query) params.set("q", state.query); if (state.sort !== "latest") params.set("sort", state.sort); if (number > 1) params.set("page", String(number)); if (state.view === "list") params.set("view", state.view); return `${location.pathname}${params.size ? `?${params}` : ""}${homeAnchor()}`; };
   previous.href = href(Math.max(1, page - 1)); previous.setAttribute("aria-disabled", page <= 1 ? "true" : "false");
   next.href = href(Math.min(pageCount, page + 1)); next.setAttribute("aria-disabled", page >= pageCount ? "true" : "false");
   pageStatus.textContent = `${page} / ${pageCount}`; pagination.hidden = pageCount <= 1;
@@ -85,8 +101,13 @@ function getMatches(query, sort) {
   return lastSearch.promise;
 }
 async function render(state, { address = false, replaceAddress = false, moveToResults = false } = {}) {
+  state.view = normalizeView(state.view);
+  const pageSize = archivePageSizes[state.view];
   requestedState = { ...state };
   const request = ++activeRequest; input.value = state.query; sortControl.value = state.sort; emptyState.hidden = true;
+  resultsList.dataset.view = state.view;
+  cardsControl.setAttribute("aria-pressed", state.view === "cards" ? "true" : "false");
+  listControl.setAttribute("aria-pressed", state.view === "list" ? "true" : "false");
   resultsList.setAttribute("aria-busy", "true");
   setStatus(state.query ? "검색 결과를 불러오는 중입니다." : "기사 목록을 정렬하는 중입니다.");
   try {
@@ -118,11 +139,13 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     retry.addEventListener("click", () => window.location.reload(), { once: true }); status.append(" ", retry); console.error("Pagefind search failed", error);
   }
 }
-form.addEventListener("submit", (event) => { event.preventDefault(); render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true }); });
+function controlsState() { return { query: input.value.trim(), sort: sortControl.value, view: requestedState?.view ?? queryState().view, page: 1 }; }
+form.addEventListener("submit", (event) => { event.preventDefault(); render(controlsState(), { address: true }); });
 input.addEventListener("compositionstart", () => { composing = true; ++activeRequest; });
-input.addEventListener("compositionend", () => { composing = false; render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true, replaceAddress: true }); });
-input.addEventListener("input", (event) => { if (!composing && !event.isComposing) render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true, replaceAddress: true }); });
-sortControl.addEventListener("change", () => render({ query: input.value.trim(), sort: sortControl.value, page: 1 }, { address: true }));
+input.addEventListener("compositionend", () => { composing = false; render(controlsState(), { address: true, replaceAddress: true }); });
+input.addEventListener("input", (event) => { if (!composing && !event.isComposing) render(controlsState(), { address: true, replaceAddress: true }); });
+sortControl.addEventListener("change", () => render(controlsState(), { address: true }));
+for (const [control, view] of [[cardsControl, "cards"], [listControl, "list"]]) control.addEventListener("click", () => { if (requestedState?.view !== view) render({ ...controlsState(), view }, { address: true }); });
 for (const [link, direction] of [[previous, -1], [next, 1]]) link.addEventListener("click", (event) => { event.preventDefault(); if (link.getAttribute("aria-disabled") === "true") return; const state = requestedState || queryState(); render({ ...state, page: state.page + direction }, { address: true, moveToResults: true }); });
 window.addEventListener("popstate", () => render(queryState()));
 render(queryState(), { address: true, replaceAddress: true });
