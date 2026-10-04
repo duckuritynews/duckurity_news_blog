@@ -3,7 +3,7 @@ import vm from "node:vm";
 
 // Isolated DOM model for the shipped bundle: control failures and completion order,
 // without corrupting the real index or treating this as a native browser/IME test.
-export async function createClient({ source, catalog, base, pagefindPath, search, failImport = false, initialView = "cards", initialSearch }) {
+export async function createClient({ source, catalog, base, pagefindPath, search, failImport = false, initialView = "cards", initialSearch, initialStorage, blockedStorage = false, revision = "test-build" }) {
   const effects = { focus: [], scroll: [], errors: [], reloads: 0 };
   class Element {
     children = []; dataset = {}; attributes = {}; listeners = {}; value = ""; hidden = false; text = "";
@@ -31,16 +31,23 @@ export async function createClient({ source, catalog, base, pagefindPath, search
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   elements["article-catalog"].textContent = JSON.stringify(catalog);
   elements["search-config"].dataset.pagefindPath = pagefindPath;
+  elements["search-config"].dataset.searchRevision = revision;
   elements["empty-state"].textContent = "아직 게시된 기사가 없습니다. 새 기사를 준비하고 있습니다.";
   const location = { pathname: `${base}archive/`, search: initialSearch ?? (initialView === "list" ? "?view=list" : ""), reload() { effects.reloads++; } };
   const origin = "https://static-test.invalid";
   const navigate = (_state, _title, url) => { location.search = new URL(url, origin).search; };
-  const window = new Element(); window.location = location;
-  const storage = new Map();
+  const window = new Element(); window.location = location; window.scrollY = 0;
+  effects.restoredScroll = [];
+  window.scrollTo = ({ top }) => { window.scrollY = top; effects.restoredScroll.push(top); };
+  const storage = new Map(initialStorage);
+  const root = { dataset: { archiveRestoring: "true" } };
   const context = vm.createContext({
-    document: { baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element("", tag), createTextNode: String },
+    document: { documentElement: root, baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element("", tag), createTextNode: String },
     window, location, history: { pushState: navigate, replaceState: navigate }, URL, URLSearchParams, Intl,
-    sessionStorage: { setItem: (key, value) => storage.set(key, value) },
+    sessionStorage: {
+      getItem: (key) => { if (blockedStorage) throw Error("Storage unavailable"); return storage.get(key); },
+      setItem: (key, value) => { if (blockedStorage) throw Error("Storage unavailable"); storage.set(key, value); },
+    },
     console: { error: (...args) => effects.errors.push(args) },
   });
   const api = new vm.SyntheticModule(["search"], function () { this.setExport("search", search); }, { context });
@@ -59,7 +66,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
   const query = (value) => { elements["article-search"].value = value; elements["article-controls"].fire("submit"); };
   const titles = () => elements["article-results"].children.map((card) => card.querySelector(".article-card__title-link").textContent);
   await settled();
-  return { elements, effects, location, window, storage, until, settled, query, titles };
+  return { elements, effects, location, window, storage, root, until, settled, query, titles };
 }
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
@@ -99,39 +106,38 @@ export async function verifyClientStates(options) {
   assert.match(real.elements["empty-state"].textContent, /일치하는 기사가 없습니다/);
   assert.doesNotMatch(real.elements["empty-state"].textContent, /게시된 기사가 없/);
   assert.equal(real.titles().length, 0); assert.equal(calls, 0);
-  const clearSearch = real.elements["empty-state"].querySelector("#clear-search");
-  assert.ok(clearSearch, "No-hit searches must offer an actionable clear control");
-  clearSearch.fire("click"); await real.settled();
+  assert.equal(real.elements["empty-state"].querySelector("#clear-search"), null);
+  assert.equal(real.elements["empty-state"].querySelector("#show-all-articles"), null);
+  assert.doesNotMatch(real.elements["empty-state"].textContent, /다른 검색어|전체 글을 확인/);
+  real.query(""); await real.settled();
   assert.equal(real.elements["article-search"].value, "");
   assert.equal(new URLSearchParams(real.location.search).get("q"), null);
-  assert.equal(real.effects.focus.at(-1), "article-search");
+  assert.equal(real.effects.focus.length, 0, "Changing search text must not move focus");
   assert.equal(real.titles().length, Math.min(pageSize, options.catalog.length));
   assert.equal(real.elements["article-results"].dataset.view, view);
+  assert.equal(real.root.dataset.archiveRestoring, undefined, "The archive becomes visible only after the requested results are painted");
   assert.equal(real.elements[`view-${view}`].getAttribute("aria-pressed"), "true");
   assert.match(real.elements["search-status"].textContent, new RegExp(`${options.catalog.length}개 결과`));
   assert.equal(real.elements["search-status"].querySelector("strong").textContent, String(options.catalog.length), "Only the result count belongs in the bold element");
   assert.equal(real.elements["empty-state"].hidden, true);
 
-  // Recovery controls operate on the displayed state and remain correct on history restoration.
+  // Editing the input after an empty search preserves the sort and view from history.
   real.location.search = `?q=CVE-2999-99999&sort=oldest&view=${view}&page=4`;
   real.window.fire("popstate"); await real.settled();
-  const recover = real.elements["empty-state"].querySelector("#clear-search");
-  recover.fire("click"); await real.settled();
+  real.query(""); await real.settled();
   assert.equal(real.elements["article-sort"].value, "oldest");
   assert.equal(real.elements["article-results"].dataset.view, view);
   assert.equal(new URLSearchParams(real.location.search).get("sort"), "oldest");
   assert.equal(new URLSearchParams(real.location.search).get("page"), null);
   assert.equal(new URLSearchParams(real.location.search).get("q"), null);
   real.query("CVE-2999-99999"); await real.settled();
-  const showAll = real.elements["empty-state"].querySelector("#show-all-articles");
-  assert.ok(showAll, "No-hit searches must offer an all-articles link");
-  assert.equal(showAll.tag, "a");
-  assert.equal(showAll.href, `${options.base}archive/${view === "list" ? "?view=list" : ""}`);
-  showAll.fire("click"); await real.settled();
+  assert.equal(real.elements["empty-state"].querySelector("#show-all-articles"), null);
+  real.elements["article-sort"].value = "latest";
+  real.query(""); await real.settled();
   assert.equal(real.elements["article-sort"].value, "latest");
   assert.equal(real.elements["article-results"].dataset.view, view);
   assert.equal(real.location.search, view === "list" ? "?view=list" : "");
-  assert.equal(real.effects.focus.at(-1), "article-results");
+  assert.equal(real.effects.focus.length, 0);
   assert.equal(real.elements["empty-state"].hidden, true);
 
   // Real Pagefind ordering and result counts must hold across every page and sort.
@@ -207,6 +213,22 @@ export async function verifyClientStates(options) {
   assert.equal(restored.elements["article-search"].value, commonQuery);
   assert.equal(restored.elements["article-sort"].value, "title");
   assert.equal(restored.elements["article-results"].dataset.view, view);
+  real.window.scrollY = 321;
+  real.window.fire("pagehide");
+  const immediate = await createClient({ ...options, initialSearch: returnAddress, initialStorage: real.storage, failImport: true, search: () => { throw Error("Saved results must not request the search index"); } });
+  assert.deepEqual(immediate.titles(), returnTitles, "A reload must immediately restore the saved results without loading the index");
+  assert.equal(immediate.effects.errors.length, 0);
+  assert.equal(immediate.window.scrollY, 321, "A return visit restores the saved scroll position");
+  let freshSearches = 0;
+  const changedCatalog = options.catalog.map((article, index) => index ? article : { ...article, summary: article.summary + " updated" });
+  const invalidated = await createClient({ ...options, catalog: changedCatalog, initialSearch: returnAddress, initialStorage: real.storage, search: (...args) => { freshSearches++; return options.pagefind.search(...args); } });
+  assert.equal(freshSearches, 1, "Changed article data must invalidate old saved results");
+  assert.equal(invalidated.root.dataset.archiveRestoring, undefined);
+  let rebuiltSearches = 0;
+  await createClient({ ...options, initialSearch: returnAddress, initialStorage: real.storage, revision: "next-build", search: (...args) => { rebuiltSearches++; return options.pagefind.search(...args); } });
+  assert.equal(rebuiltSearches, 1, "A new build must invalidate cached searches even when only article body text changes");
+  const noStorage = await createClient({ ...options, initialSearch: returnAddress, blockedStorage: true, search: (...args) => options.pagefind.search(...args) });
+  assert.deepEqual(noStorage.titles(), returnTitles, "Blocked storage still permits ordinary URL restoration");
   real.elements["article-results"].replaceChildren();
   real.window.fire("pagehide"); real.window.fire("pageshow", { persisted: true }); await real.settled();
   assert.deepEqual(real.titles(), returnTitles, "BFCache restoration must rebuild the current results");
@@ -222,6 +244,18 @@ export async function verifyClientStates(options) {
   await real.settled();
   assert.equal(calls, countBeforeIme + 1, "Compositionend/input should share one search");
   assert.equal(real.effects.focus.length, focusBeforeIme);
+
+  const typedQueries = [];
+  const liveInput = await createClient({ ...options, search: async (query) => { typedQueries.push(query); return { results: [] }; } });
+  const type = (value) => { liveInput.elements["article-search"].value = value; liveInput.elements["article-search"].fire("input"); };
+  type("first"); await liveInput.settled(); type("last"); await liveInput.settled();
+  assert.deepEqual(typedQueries, ["first", "last"], "Input searches immediately without a one-second timer");
+  liveInput.elements["article-controls"].fire("submit"); await liveInput.settled();
+  assert.deepEqual(typedQueries, ["first", "last"], "The restored submit button retains the current query");
+  const message = liveInput.elements["empty-state"].querySelector("p");
+  assert.equal(message.querySelector(".empty-state__query").textContent, "last");
+  assert.equal(message.querySelector(".empty-state__closing-quote").textContent, "”");
+  assert.equal(message.textContent, "“last”와 일치하는 기사가 없습니다.");
 
   const pending = new Map();
   const controlled = await createClient({ ...options, search: (query) => { const task = deferred(); pending.set(query, task); return task.promise; } });
@@ -292,20 +326,27 @@ export function verifyArticleReturn({ source, base }) {
   const archive = `https://static-test.invalid${base}archive/`;
   const articlePath = `${base}articles/return-test/`;
   const results = `${archive}?q=${encodeURIComponent("보안 검색")}&sort=oldest&view=list&page=2`;
-  function run(referrer, saved, blocked = false) {
-    const back = { href: archive, setAttribute() {} };
+  function run(referrer, saved, { blocked = false, historyLength = 2, modifiers = {} } = {}) {
+    let click;
+    const effects = { back: 0, prevented: 0 };
+    const back = { href: archive, addEventListener(_type, handler) { click = handler; } };
     vm.runInNewContext(source, {
       URL, location: { pathname: articlePath },
       document: { referrer, baseURI: `https://static-test.invalid${articlePath}`, querySelector: () => back },
       sessionStorage: { getItem() { if (blocked) throw Error("Storage unavailable"); return JSON.stringify(saved); } },
+      history: { length: historyLength, back() { effects.back++; } },
     });
-    return back.href;
+    click?.({ button: 0, preventDefault() { effects.prevented++; }, ...modifiers });
+    return { href: back.href, ...effects };
   }
-  assert.equal(run(results), results, "The detail back link must retain query/sort/view/page");
-  assert.equal(run("", { articlePath, archiveUrl: results }), results, "Suppressed referrers must use the saved article context");
-  assert.equal(run(`https://static-test.invalid${base}`, { articlePath, archiveUrl: results }), archive, "Home visits must not reuse an old archive search");
-  assert.equal(run("", { articlePath: "/other/", archiveUrl: results }), archive);
-  assert.equal(run("https://untrusted.invalid/archive/"), archive);
-  assert.equal(run("", null, true), archive);
-  console.log("Article return passed: exact search context, referrer fallback, direct/home visits, unrelated articles, external URLs and blocked storage.");
+  assert.deepEqual(run(results), { href: results, back: 1, prevented: 1 }, "Return from search must use the existing history entry");
+  const home = `https://static-test.invalid${base}`;
+  assert.deepEqual(run(home, { articlePath, archiveUrl: results }), { href: home, back: 1, prevented: 1 }, "Home visits must return to home rather than an old archive search");
+  assert.deepEqual(run(results, null, { historyLength: 1 }), { href: results, back: 0, prevented: 0 }, "New tabs must follow the fallback link");
+  assert.equal(run(results, null, { modifiers: { ctrlKey: true } }).back, 0, "Modified clicks keep normal link behavior");
+  assert.equal(run("", { articlePath, archiveUrl: results }).href, results);
+  assert.equal(run("", { articlePath: "/other/", archiveUrl: results }).href, archive);
+  assert.equal(run("https://untrusted.invalid/archive/").href, archive);
+  assert.equal(run("", null, { blocked: true }).href, archive);
+  console.log("Article return passed: native history, exact search context, home, new tabs, modified clicks, referrer fallback and blocked storage.");
 }

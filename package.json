@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "check": "astro check && node --experimental-strip-types --test src/lib/article-sort.test.ts src/lib/first-image.test.ts",
+    "check": "astro check && node --experimental-strip-types --test src/lib/article-sort.test.ts src/lib/first-image.test.ts src/lib/article-week.test.ts && node scripts/verify-home-interactions.mjs",
     "build": "astro check && astro build && pagefind --site dist",
     "build:fixtures": "node scripts/build-fixtures.mjs",
     "verify:build": "node --experimental-strip-types --experimental-vm-modules scripts/verify-build.mjs",

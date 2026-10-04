@@ -7,11 +7,15 @@ import { gunzipSync } from "node:zlib";
 import { sortArticles } from "../src/lib/article-sort.ts";
 import { firstImageFromHtml } from "../src/lib/first-image.ts";
 import { verifyArticleReturn } from "./verify-client-states.mjs";
+import { splitLatestPublicationWeek } from "../src/lib/article-week.ts";
 
 // Exercise the shipped static files and client bundle without a browser dependency.
 const root = resolve(process.argv[2] || "dist");
 const newsletterHtml = readFileSync(join(root, "index.html"), "utf8");
 const html = readFileSync(join(root, "archive/index.html"), "utf8");
+assert.ok(/<button[^>]*type="submit"[^>]*>검색<\/button>/.test(html), "The search button must be rendered");
+const toolbarHtml = html.match(/class="archive-results-toolbar"[\s\S]*?(?=<div id="empty-state")/)[0];
+assert.ok(toolbarHtml.includes('id="article-sort"') && toolbarHtml.includes('form="article-controls"'), "Sort belongs beside view controls and remains associated with the search form");
 const catalog = JSON.parse(html.match(/<script[^>]*id="article-catalog"[^>]*>(.*?)<\/script>/s)[1]);
 const pagefindPath = html.match(/data-pagefind-path="([^"]+)"/)[1];
 const base = pagefindPath.replace(/pagefind\/pagefind\.js$/, "");
@@ -68,7 +72,8 @@ assert.ok(newsletterHtml.includes("MR.DUCK&#39;S WEEKLY LETTER") || newsletterHt
 assert.ok(newsletterHtml.includes("이번 주 픽"));
 assert.ok(!newsletterHtml.includes("먼저 읽어볼 이야기"));
 const recent = [...newsletterHtml.matchAll(/<li class="article-card article-card--compact">([\s\S]*?)(?=<li class="article-card article-card--compact">|<\/ol>)/g)];
-const previousArticles = sortArticles(catalog, "latest").slice(1, 7);
+const { weekly, previous: earlier } = splitLatestPublicationWeek(sortArticles(catalog, "latest").map((article) => ({ ...article, data: { publishedAt: article.publishedAt } })));
+const previousArticles = earlier.slice(0, 6);
 assert.equal(recent.length, previousArticles.length);
 recent.forEach((card, index) => {
   const link = card[1].match(/class="article-card__link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
@@ -111,12 +116,22 @@ if (catalog.length) {
 }
 if (latest) {
   assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));
-  const weeklyHref = newsletterHtml.match(/<a[^>]*class="home-button home-button--coral"[^>]*href="([^"]+)"/)?.[1];
-  assert.equal(unescapeHtml(weeklyHref ?? ""), latest.href, "Weekly CTA must lead to the newest public article");
   const featuredHtml = newsletterHtml.match(/class="home-feature__image">([\s\S]*?)<div class="home-feature__copy"/)[1];
   const featuredImage = firstImageFromHtml(featuredHtml);
   assert.equal(Boolean(featuredImage), Boolean(latest.thumbnail));
   if (featuredImage) for (const key of ["src", "alt", "width", "height"]) assert.equal(featuredImage[key], latest.thumbnail[key], "Featured and archive images must match");
+}
+assert.ok(!newsletterHtml.includes("이번 주 보안 소식 읽기"), "The removed newsletter CTA must not be rendered");
+assert.ok(newsletterHtml.includes('class="home-image-slot home-hero__image"'), "The home mascot must be restored");
+assert.ok(!newsletterHtml.includes('class="home-feature__arrow"'), "Weekly cards must not contain the removed read arrow");
+const featuredLinks = [...newsletterHtml.matchAll(/class="home-feature__card" href="([^"]+)"/g)].map((match) => unescapeHtml(match[1]));
+assert.deepEqual(featuredLinks, weekly.map((article) => article.href), "All picks must belong to the latest Korean publication week in newest-first order");
+assert.equal(newsletterHtml.includes("data-weekly-controls"), weekly.length > 1, "Only multiple picks need pagination controls");
+for (const card of newsletterHtml.matchAll(/class="home-feature__card"[\s\S]*?<\/a>/g)) assert.ok(!card[0].includes("<p>"), "Weekly picks must not display article summaries");
+if (weekly.length > 1) {
+  const controls = newsletterHtml.match(/<nav class="home-feature__pagination"[^>]*>([\s\S]*?)<\/nav>/)[1];
+  assert.ok(controls.indexOf("data-weekly-page") < controls.indexOf("data-weekly-autoplay") && controls.indexOf("data-weekly-autoplay") < controls.indexOf("data-weekly-next"), "The autoplay icon must sit between the counter and next button");
+  assert.ok(controls.includes("data-weekly-pause-icon") && controls.includes("data-weekly-play-icon"));
 }
 assert.ok(existsSync(join(root, "404.html")));
 const fragmentDir = join(root, "pagefind/fragment");
@@ -190,7 +205,7 @@ const location = { pathname: archivePath, search: "?sort=title&page=999", hash: 
 const navigate = (_state, _title, url) => { const next = new URL(url, origin); location.pathname = next.pathname; location.search = next.search; location.hash = next.hash; };
 const window = new Element();
 const context = vm.createContext({
-  document: { baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element(tag), createTextNode: (text) => String(text) },
+  document: { documentElement: { dataset: {} }, baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element(tag), createTextNode: (text) => String(text) },
   location, window, history: { pushState: navigate, replaceState: navigate }, URL, URLSearchParams, Intl, console,
 });
 const scriptPath = html.match(/<script[^>]*src="([^"]+)"/)[1];
