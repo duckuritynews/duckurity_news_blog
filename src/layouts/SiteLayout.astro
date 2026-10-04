@@ -2,12 +2,12 @@
 import "../styles/global.css";
 import "../styles/home.css";
 import { siteUrl } from "../lib/urls";
-import { home } from "../config/home";
 import { Image } from "astro:assets";
-import faceLogo from "../assets/brand/미스터덕_블로그_01_얼굴로고_2D.png";
+import faceLogo from "../assets/brand/mrduck-profile.png";
 interface Props { title: string; description: string; page?: "newsletter" | "archive" | "about" }
 const { title, description, page } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+const navPage = page ?? (Astro.url.pathname.startsWith(siteUrl("articles/")) ? "archive" : undefined);
 ---
 <!doctype html>
 <html lang="ko">
@@ -16,15 +16,30 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
     <meta name="description" content={description} /><link rel="canonical" href={canonical} />
     <slot name="head" /><link rel="icon" href={siteUrl("favicon.webp")} type="image/webp" />
     <meta name="theme-color" content="#ffffff" /><title>{title}</title>
+    <script is:inline>
+      window.addEventListener("pagereveal", (event) => {
+        if (event.viewTransition) document.documentElement.dataset.navTransition = "active";
+      });
+    </script>
   </head>
   <body class:list={{ "page-home": Boolean(page), [`page-${page}`]: Boolean(page) }}>
     <a class="skip-link" href="#main">본문 바로가기</a>
     <header class="site-header" data-pagefind-ignore><div class="shell header-row">
-      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[64, 128, 192]} sizes="4rem" loading="eager" /><span>duckurity</span></a>
-      <nav class="site-nav" aria-label="사이트 탐색"><a href={siteUrl()} aria-current={page === "newsletter" ? "page" : undefined}>뉴스레터</a><a href={siteUrl("archive/")} aria-current={page === "archive" ? "page" : undefined}>아카이브</a><a href={siteUrl("about/")} aria-current={page === "about" ? "page" : undefined}>소개</a></nav>
-      {home.subscriptionUrl ? <a class="home-button header-subscribe" href={home.subscriptionUrl}>구독하기</a> : <button class="home-button header-subscribe" type="button" disabled title="뉴스레터 구독 서비스 준비 중">구독하기</button>}
+      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={60} height={60} widths={[60, 120, 180]} sizes="(max-width: 40rem) 3rem, 3.75rem" loading="eager" /><span class="brand__copy">Duckurity News</span></a>
+      <nav class="site-nav" aria-label="사이트 탐색">
+        <a href={siteUrl()} aria-current={navPage === "newsletter" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">홈</span></a>
+        <a href={siteUrl("archive/")} aria-current={navPage === "archive" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">전체 글</span></a>
+        <a href={siteUrl("about/")} aria-current={navPage === "about" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">소개</span></a>
+      </nav>
     </div></header>
     <slot />
-    <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row"><a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={64} height={64} widths={[64, 128, 192]} sizes="4rem" loading="lazy" /><span>duckurity</span></a><p class="footer-description">복잡한 보안 이슈를 핵심부터 읽습니다.</p></div></footer>
+    <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row">
+      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={48} height={48} widths={[48, 96, 144]} sizes="3rem" loading="lazy" /><span>Duckurity News</span></a>
+      <a class="footer-instagram" data-liquid-glass="control" href="https://www.instagram.com/duckurity._.news/" aria-label="Duckurity News 인스타그램">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>
+        <span>@duckurity._.news</span>
+      </a>
+    </div></footer>
+    <script>import "../scripts/liquid-glass-client.js";</script>
   </body>
 </html>

@@ -16,10 +16,10 @@ const { data } = article;
 const published = new Date(data.publishedAt);
 const updated = data.updatedAt ? new Date(data.updatedAt) : undefined;
 ---
-<SiteLayout title={`${data.title} | Duckurity 뉴스`} description={data.summary}>
+<SiteLayout title={`${data.title} | Duckurity News`} description={data.summary}>
   <main id="main" class="site-main"><article class="article-width">
     <header class="article-header">
-      <a href={siteUrl("archive/")} aria-label="전체 기사 아카이브로">← 전체 기사</a>
+      <a class="article-header__back" data-liquid-glass="control" href={siteUrl("archive/")} aria-label="전체 기사 아카이브로">← 전체 기사</a>
       <p class="eyebrow">{data.level ?? "보안 브리핑"}</p>
       <h1 data-pagefind-body data-pagefind-meta="title">{data.title}</h1>
       <p class="article-summary" data-pagefind-body data-pagefind-meta="summary">{data.summary}</p>

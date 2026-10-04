@@ -7,7 +7,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
   const effects = { focus: [], scroll: [], errors: [], reloads: 0 };
   class Element {
     children = []; dataset = {}; attributes = {}; listeners = {}; value = ""; hidden = false; text = "";
-    constructor(id = "") { this.id = id; }
+    constructor(id = "", tag = "div") { this.id = id; this.tag = tag; }
     set textContent(value) { this.text = String(value); this.children = []; }
     get textContent() { return this.text + this.children.map((child) => typeof child === "string" ? child : child.textContent).join(""); }
     append(...children) { this.children.push(...children); }
@@ -17,7 +17,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
     querySelector(selector) {
       for (const child of this.children) {
         if (typeof child === "string") continue;
-        if (selector.startsWith(".") && child.className?.split(/\s+/).includes(selector.slice(1))) return child;
+        if ((selector.startsWith(".") && child.className?.split(/\s+/).includes(selector.slice(1))) || (selector.startsWith("#") && child.id === selector.slice(1)) || child.tag === selector) return child;
         const nested = child.querySelector(selector); if (nested) return nested;
       }
       return null;
@@ -37,7 +37,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
   const navigate = (_state, _title, url) => { location.search = new URL(url, origin).search; };
   const window = new Element(); window.location = location;
   const context = vm.createContext({
-    document: { baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: () => new Element(), createTextNode: String },
+    document: { baseURI: origin + base, querySelector: (selector) => elements[selector.slice(1)], createElement: (tag) => new Element("", tag), createTextNode: String },
     window, location, history: { pushState: navigate, replaceState: navigate }, URL, URLSearchParams, Intl,
     console: { error: (...args) => effects.errors.push(args) },
   });
@@ -80,15 +80,53 @@ export async function verifyClientStates(options) {
     const result = await options.pagefind.search(...args);
     return { results: result.results.map((item) => ({ id: item.id, data: () => { dataCalls++; return item.data(); } })) };
   } });
+  for (const card of real.elements["article-results"].children) {
+    const link = card.querySelector(".article-card__link");
+    assert.ok(link, "Every card must have one link that includes its image and body");
+    assert.equal(link.tag, "a");
+    assert.ok(link.querySelector(".article-card__media"));
+    assert.ok(link.querySelector(".article-card__body"));
+    assert.equal(link.querySelector("a"), null, "Whole-card links must not contain nested links");
+    assert.ok(link.href.startsWith(`${options.base}articles/`));
+    const heading = link.querySelector(".article-card__title");
+    assert.equal(link.getAttribute("aria-labelledby"), heading.id, "The card's accessible link name must be its title");
+  }
   real.query("CVE-2999-99999"); await real.settled();
   assert.match(real.elements["search-status"].textContent, /일치하는 기사가 없습니다/);
   assert.doesNotMatch(real.elements["empty-state"].textContent, /게시된 기사가 없/);
   assert.equal(real.titles().length, 0); assert.equal(calls, 0);
-  real.query(""); await real.settled();
+  const clearSearch = real.elements["empty-state"].querySelector("#clear-search");
+  assert.ok(clearSearch, "No-hit searches must offer an actionable clear control");
+  clearSearch.fire("click"); await real.settled();
+  assert.equal(real.elements["article-search"].value, "");
+  assert.equal(new URLSearchParams(real.location.search).get("q"), null);
+  assert.equal(real.effects.focus.at(-1), "article-search");
   assert.equal(real.titles().length, Math.min(pageSize, options.catalog.length));
   assert.equal(real.elements["article-results"].dataset.view, view);
   assert.equal(real.elements[`view-${view}`].getAttribute("aria-pressed"), "true");
   assert.match(real.elements["search-status"].textContent, new RegExp(`${options.catalog.length}개 결과`));
+  assert.equal(real.elements["empty-state"].hidden, true);
+
+  // Recovery controls operate on the displayed state and remain correct on history restoration.
+  real.location.search = `?q=CVE-2999-99999&sort=oldest&view=${view}&page=4`;
+  real.window.fire("popstate"); await real.settled();
+  const recover = real.elements["empty-state"].querySelector("#clear-search");
+  recover.fire("click"); await real.settled();
+  assert.equal(real.elements["article-sort"].value, "oldest");
+  assert.equal(real.elements["article-results"].dataset.view, view);
+  assert.equal(new URLSearchParams(real.location.search).get("sort"), "oldest");
+  assert.equal(new URLSearchParams(real.location.search).get("page"), null);
+  assert.equal(new URLSearchParams(real.location.search).get("q"), null);
+  real.query("CVE-2999-99999"); await real.settled();
+  const showAll = real.elements["empty-state"].querySelector("#show-all-articles");
+  assert.ok(showAll, "No-hit searches must offer an all-articles link");
+  assert.equal(showAll.tag, "a");
+  assert.equal(showAll.href, `${options.base}archive/${view === "list" ? "?view=list" : ""}`);
+  showAll.fire("click"); await real.settled();
+  assert.equal(real.elements["article-sort"].value, "latest");
+  assert.equal(real.elements["article-results"].dataset.view, view);
+  assert.equal(real.location.search, view === "list" ? "?view=list" : "");
+  assert.equal(real.effects.focus.at(-1), "article-results");
   assert.equal(real.elements["empty-state"].hidden, true);
 
   // Real Pagefind ordering and result counts must hold across every page and sort.
@@ -109,7 +147,7 @@ export async function verifyClientStates(options) {
       real.elements["next-page"].fire("click"); await real.settled();
       assert.equal(real.effects.focus.length, focused + 1);
       assert.equal(real.effects.focus.at(-1), "article-results");
-      assert.equal(real.effects.scroll.length, real.effects.focus.length);
+      assert.equal(real.effects.scroll.length, real.effects.focus.filter((id) => id === "article-results").length);
       assert.equal(real.elements["page-status"].textContent, `${page} / ${pages}`);
       assert.ok(real.elements["search-status"].textContent.endsWith(` · ${page}페이지`), "Result status must follow the current page");
       visited.push(...real.titles());

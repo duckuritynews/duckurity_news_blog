@@ -34,20 +34,26 @@ function queryState() {
 function rankField(sort) { return sort === "oldest" ? "oldestRank" : sort === "title" ? "titleKoRank" : "latestRank"; }
 function sortedCatalog(sort) { const key = rankField(sort); return [...catalog].sort((a, b) => a[key] - b[key]); }
 function homeAnchor() { return ["#article-archive", "#main"].includes(location.hash) ? location.hash : ""; }
-function updateAddress({ query, sort, page, view }, replace = false) {
+function stateAddress({ query, sort, page, view }) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (sort !== "latest") params.set("sort", sort);
   if (page > 1) params.set("page", String(page));
   if (view === "list") params.set("view", view);
-  history[replace ? "replaceState" : "pushState"]({}, "", `${location.pathname}${params.size ? `?${params}` : ""}${homeAnchor()}`);
+  return `${location.pathname}${params.size ? `?${params}` : ""}${homeAnchor()}`;
+}
+function updateAddress(state, replace = false) {
+  history[replace ? "replaceState" : "pushState"]({}, "", stateAddress(state));
 }
 function makeCard(article) {
   const item = document.createElement("li"); item.className = "article-card";
+  const link = document.createElement("a"); link.className = "article-card__link";
+  link.href = article.href || articleUrl(article.slug);
+  const titleId = `article-card-title-${article.slug}`; link.setAttribute("aria-labelledby", titleId);
   const media = document.createElement("div"); media.className = "article-card__media";
   if (article.thumbnail) {
     const image = document.createElement("img");
-    for (const key of ["src", "width", "height", "alt"]) image.setAttribute(key, article.thumbnail[key]);
+    for (const key of ["src", "width", "height", "alt"]) if (article.thumbnail[key] != null) image.setAttribute(key, article.thumbnail[key]);
     image.setAttribute("loading", "lazy"); media.append(image);
   } else {
     const placeholder = document.createElement("div"); placeholder.className = "home-image-slot"; placeholder.setAttribute("aria-hidden", "true");
@@ -58,19 +64,37 @@ function makeCard(article) {
   const date = document.createElement("time"); date.dateTime = article.publishedAt;
   date.textContent = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(article.publishedAt));
   meta.append(date);
-  const heading = document.createElement("h2"); heading.className = "article-card__title";
-  const link = document.createElement("a"); link.className = "article-card__title-link";
-  link.href = article.href || articleUrl(article.slug); link.textContent = article.title; heading.append(link);
-  const summary = document.createElement("p"); summary.textContent = article.summary;
+  const heading = document.createElement("h2"); heading.className = "article-card__title"; heading.id = titleId;
+  const title = document.createElement("span"); title.className = "article-card__title-link"; title.textContent = article.title; heading.append(title);
+  const summary = document.createElement("p"); summary.className = "article-card__summary"; summary.textContent = article.summary;
   const tags = document.createElement("ul"); tags.className = "tags"; tags.setAttribute("aria-label", "기사 태그");
   for (const value of article.tags || []) { const tag = document.createElement("li"); tag.className = "tag"; tag.textContent = value; tags.append(tag); }
   const read = document.createElement("span"); read.className = "article-card__read"; read.setAttribute("aria-hidden", "true"); read.textContent = "읽으러 가기 →";
   const footer = document.createElement("div"); footer.className = "article-card__footer"; footer.append(tags, read);
-  body.append(meta, heading, summary, footer); item.append(media, body); return item;
+  body.append(meta, heading, summary, footer); link.append(media, body); item.append(link); return item;
 }
 function setStatus(text, kind = "normal") { status.replaceChildren(document.createTextNode(text)); status.dataset.kind = kind; }
+function setEmptyState(state) {
+  const message = document.createElement("p");
+  message.textContent = catalog.length ? "다른 검색어로 검색하거나 전체 글을 확인해 보세요." : "새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
+  emptyState.replaceChildren(message);
+  if (!catalog.length || !state.query) return;
+  const actions = document.createElement("div"); actions.className = "empty-state__actions";
+  const clear = document.createElement("button"); clear.type = "button"; clear.id = "clear-search"; clear.className = "button";
+  clear.dataset.liquidGlass = "control";
+  clear.textContent = "검색어 지우기"; clear.setAttribute("aria-controls", "article-results");
+  clear.addEventListener("click", () => {
+    render({ ...state, query: "", page: 1 }, { address: true });
+    input.focus({ preventScroll: true });
+  });
+  const allState = { query: "", sort: "latest", view: state.view, page: 1 };
+  const all = document.createElement("a"); all.id = "show-all-articles"; all.className = "button"; all.href = stateAddress(allState); all.textContent = "전체 글 보기";
+  all.dataset.liquidGlass = "control";
+  all.addEventListener("click", (event) => { event.preventDefault(); render(allState, { address: true, moveToResults: true }); });
+  actions.append(clear, all); emptyState.append(actions);
+}
 function setPages(page, pageCount, state) {
-  const href = (number) => { const params = new URLSearchParams(); if (state.query) params.set("q", state.query); if (state.sort !== "latest") params.set("sort", state.sort); if (number > 1) params.set("page", String(number)); if (state.view === "list") params.set("view", state.view); return `${location.pathname}${params.size ? `?${params}` : ""}${homeAnchor()}`; };
+  const href = (number) => stateAddress({ ...state, page: number });
   previous.href = href(Math.max(1, page - 1)); previous.setAttribute("aria-disabled", page <= 1 ? "true" : "false");
   next.href = href(Math.min(pageCount, page + 1)); next.setAttribute("aria-disabled", page >= pageCount ? "true" : "false");
   pageStatus.textContent = `${page} / ${pageCount}`; pagination.hidden = pageCount <= 1;
@@ -121,7 +145,7 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     resultsList.setAttribute("aria-busy", "false");
     resultsList.setAttribute("aria-label", `보안 뉴스 목록 · ${state.page} / ${pageCount} 페이지`);
     emptyState.hidden = count !== 0;
-    emptyState.textContent = catalog.length ? "다른 검색어를 입력하거나 검색어를 지워 전체 기사를 확인해 보세요." : "새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
+    setEmptyState(state);
     const resultStatus = `${count}개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"} · ${state.page}페이지`;
     setStatus(count === 0 ? `${resultStatus} · ${catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다."}` : resultStatus);
     setPages(state.page, pageCount, state); if (address) updateAddress(state, replaceAddress);
@@ -137,6 +161,7 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     if (address) updateAddress(state, replaceAddress);
     setStatus("검색 색인을 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.", "error");
     const retry = document.createElement("button"); retry.type = "button"; retry.className = "button"; retry.textContent = "다시 시도";
+    retry.dataset.liquidGlass = "control";
     retry.addEventListener("click", () => window.location.reload(), { once: true }); status.append(" ", retry); console.error("Pagefind search failed", error);
   }
 }

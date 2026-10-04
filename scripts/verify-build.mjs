@@ -47,15 +47,18 @@ const staticCards = [...html.matchAll(/<li class="article-card">([\s\S]*?)(?=<li
 assert.equal(staticCards.length, Math.min(pageSize, catalog.length));
 for (const [index, card] of staticCards.entries()) {
   const article = sortArticles(catalog, "latest")[index];
-  const title = card[1].match(/<a[^>]*class="article-card__title-link"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/s);
-  assert.ok(title, "Static card must expose its title link");
-  assert.equal(unescapeHtml(title[1]), article.href);
-  assert.equal(unescapeHtml(title[2]), article.title);
+  const link = card[1].match(/<a[^>]*class="article-card__link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+  assert.ok(link, "Static card must expose one link around its image and body");
+  assert.equal(unescapeHtml(link[1]), article.href);
+  assert.equal((card[1].match(/<a\b/g) ?? []).length, 1, "Card must have only one keyboard target");
+  assert.ok(link[2].includes('class="article-card__media"') && link[2].includes('class="article-card__body"'));
+  const title = link[2].match(/class="article-card__title-link"[^>]*>(.*?)<\/span>/s);
+  assert.equal(unescapeHtml(title[1]), article.title);
   const image = card[1].match(/<img\b([^>]+)>/);
   assert.equal(Boolean(image), Boolean(article.thumbnail));
   if (article.thumbnail) {
     const attrs = Object.fromEntries([...image[1].matchAll(/([a-z]+)="([^"]*)"/g)].map((match) => [match[1], unescapeHtml(match[2])]));
-    for (const key of ["src", "alt", "width", "height"]) assert.equal(attrs[key], String(article.thumbnail[key]));
+    for (const key of ["src", "alt", "width", "height"]) assert.equal(attrs[key], article.thumbnail[key] === undefined ? undefined : String(article.thumbnail[key]));
   }
 }
 assert.ok(existsSync(join(root, "about/index.html")));
@@ -67,18 +70,38 @@ const recent = [...newsletterHtml.matchAll(/<li class="article-card article-card
 const previousArticles = sortArticles(catalog, "latest").slice(1, 7);
 assert.equal(recent.length, previousArticles.length);
 recent.forEach((card, index) => {
-  const title = card[1].match(/class="article-card__title-link"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/s);
-  assert.equal(unescapeHtml(title[1]), previousArticles[index].href);
-  assert.equal(unescapeHtml(title[2]), previousArticles[index].title);
+  const link = card[1].match(/class="article-card__link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+  assert.equal(unescapeHtml(link[1]), previousArticles[index].href);
+  assert.equal((card[1].match(/<a\b/g) ?? []).length, 1);
+  assert.ok(link[2].includes('class="article-card__media"'));
+  const title = link[2].match(/class="article-card__title-link"[^>]*>(.*?)<\/span>/s);
+  assert.equal(unescapeHtml(title[1]), previousArticles[index].title);
   assert.ok(!card[1].includes('class="card-meta"') && !card[1].includes("<p>") && !card[1].includes('class="article-card__read"'));
 });
 const latest = sortArticles(catalog, "latest")[0];
+for (const article of catalog) {
+  const detailHtml = readFileSync(localFile(article.href), "utf8");
+  const coverHtml = detailHtml.match(/<figure class="cover">([\s\S]*?)<\/figure>/)?.[1];
+  const proseHtml = detailHtml.match(/class="prose"[^>]*>([\s\S]*?)<footer class="sources"/)[1];
+  if (coverHtml) {
+    const cover = firstImageFromHtml(coverHtml);
+    assert.ok(article.thumbnail, "An explicit cover must appear in the article catalog");
+    assert.equal(article.thumbnail.alt, cover.alt, "Explicit cover must take precedence over body images");
+    assert.ok(Math.abs(article.thumbnail.width / article.thumbnail.height - cover.width / cover.height) < .01);
+  } else {
+    const bodyImage = firstImageFromHtml(proseHtml);
+    assert.equal(Boolean(article.thumbnail), Boolean(bodyImage), "Archive must use the same body-image fallback as home");
+    if (bodyImage) for (const key of ["src", "alt", "width", "height"]) assert.equal(article.thumbnail[key], bodyImage[key]);
+  }
+}
 if (latest) {
   assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));
-  const detailHtml = readFileSync(localFile(latest.href), "utf8");
-  const proseHtml = detailHtml.match(/class="prose"[^>]*>([\s\S]*?)<footer class="sources"/)[1];
+  const weeklyHref = newsletterHtml.match(/<a[^>]*class="home-button home-button--coral"[^>]*href="([^"]+)"/)?.[1];
+  assert.equal(unescapeHtml(weeklyHref ?? ""), latest.href, "Weekly CTA must lead to the newest public article");
   const featuredHtml = newsletterHtml.match(/class="home-feature__image">([\s\S]*?)<div class="home-feature__copy"/)[1];
-  assert.deepEqual(firstImageFromHtml(featuredHtml), firstImageFromHtml(proseHtml), "Featured image must use the first displayed body image, regardless of cover");
+  const featuredImage = firstImageFromHtml(featuredHtml);
+  assert.equal(Boolean(featuredImage), Boolean(latest.thumbnail));
+  if (featuredImage) for (const key of ["src", "alt", "width", "height"]) assert.equal(featuredImage[key], latest.thumbnail[key], "Featured and archive images must match");
 }
 assert.ok(existsSync(join(root, "404.html")));
 const fragmentDir = join(root, "pagefind/fragment");
@@ -176,7 +199,10 @@ async function settled() {
 const cards = () => elements["article-results"].children.map((card) => card.querySelector(".article-card__title-link"));
 function expectCards(articles) {
   assert.deepEqual(cards().map((link) => link.textContent), articles.map((article) => article.title));
-  for (const link of cards()) {
+  for (const card of elements["article-results"].children) {
+    const link = card.querySelector(".article-card__link");
+    assert.ok(link.querySelector(".article-card__media") && link.querySelector(".article-card__body"), "Client card image and body must share a link");
+    assert.equal(link.querySelector("a"), null, "Card links must not contain nested links");
     assert.ok(link.href.startsWith(`${base}articles/`), `Wrong client article URL: ${link.href}`);
     assert.ok(existsSync(localFile(link.href)));
   }
@@ -187,7 +213,9 @@ function expectCards(articles) {
     if (thumbnail) {
       for (const key of ["src", "alt", "width", "height"]) assert.equal(String(image.getAttribute(key)), String(thumbnail[key]));
       assert.ok(existsSync(localFile(thumbnail.src)), `Broken thumbnail: ${thumbnail.src}`);
-      assert.ok(thumbnail.width > 0 && thumbnail.height > 0 && thumbnail.alt);
+      assert.ok(thumbnail.alt);
+      if (thumbnail.width !== undefined) assert.ok(thumbnail.width > 0);
+      if (thumbnail.height !== undefined) assert.ok(thumbnail.height > 0);
     }
   });
 }

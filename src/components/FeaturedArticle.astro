@@ -10,12 +10,11 @@ const { article } = Astro.props;
       {article.thumbnail ? <img {...article.thumbnail} loading="lazy" /> : <div class="home-image-slot" aria-hidden="true"><span>대표 이미지 준비 중</span></div>}
     </div>
     <div class="home-feature__copy">
-      <span class="home-badge home-badge--weekly">SECURITY BASICS</span>
       <h3 id="featured-article-title">{article.title}</h3>
       <p>{article.summary}</p>
       <div class="home-feature__footer">
         <div class="home-feature__meta"><time datetime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time>{article.tags.length > 0 && <ul class="home-feature__keywords" aria-label="대표 기사 키워드">{article.tags.slice(0, 2).map((tag) => <li>{tag}</li>)}</ul>}</div>
-        <span class="home-feature__arrow" aria-hidden="true">→</span>
+        <span class="home-feature__arrow" data-liquid-glass="control" aria-hidden="true">→</span>
       </div>
     </div>
   </a></article> : <p class="empty-state">아직 게시된 기사가 없습니다.</p>}
