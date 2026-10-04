@@ -121,7 +121,9 @@ if (latest) {
   assert.equal(Boolean(featuredImage), Boolean(latest.thumbnail));
   if (featuredImage) for (const key of ["src", "alt", "width", "height"]) assert.equal(featuredImage[key], latest.thumbnail[key], "Featured and archive images must match");
 }
-assert.ok(!newsletterHtml.includes("이번 주 보안 소식 읽기"), "The removed newsletter CTA must not be rendered");
+assert.ok(newsletterHtml.includes("최신 보안 소식 보러가기"), "The newsletter CTA must be rendered with its updated label");
+if (latest) assert.ok(newsletterHtml.includes(`class="home-button home-button--coral" data-liquid-glass="primary" href="${latest.href}"`), "The newsletter CTA must link directly to the newest article");
+else assert.ok(/<button[^>]*disabled[^>]*><span class="home-button__label">최신 보안 소식 보러가기<\/span><\/button>/.test(newsletterHtml), "The CTA must be disabled when no articles exist");
 assert.ok(newsletterHtml.includes('class="home-image-slot home-hero__image"'), "The home mascot must be restored");
 assert.ok(!newsletterHtml.includes('class="home-feature__arrow"'), "Weekly cards must not contain the removed read arrow");
 const featuredLinks = [...newsletterHtml.matchAll(/class="home-feature__card" href="([^"]+)"/g)].map((match) => unescapeHtml(match[1]));

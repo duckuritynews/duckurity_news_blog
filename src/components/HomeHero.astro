@@ -3,14 +3,17 @@ import { home } from "../config/home";
 import { Image } from "astro:assets";
 import shieldMascot from "../assets/brand/미스터덕_블로그_02_메인방패_2D.png";
 // Keep the asset and optional rendering available for a later comparison.
-interface Props { showMascot?: boolean }
-const { showMascot = false } = Astro.props;
+interface Props { showMascot?: boolean; articleHref?: string | undefined }
+const { showMascot = false, articleHref } = Astro.props;
 ---
 <section class:list={["home-hero", { "home-hero--text-only": !showMascot }]} aria-labelledby="page-title">
   <div class="home-hero__copy">
     <span class="home-badge home-badge--weekly">MR.DUCK'S WEEKLY LETTER</span>
     <h1 id="page-title">{home.title}</h1>
     <p>{home.description}</p>
+    <div class="home-actions">
+      {articleHref ? <a class="home-button home-button--coral" data-liquid-glass="primary" href={articleHref}><span class="home-button__label">최신 보안 소식 보러가기</span><span aria-hidden="true"> →</span></a> : <button class="home-button" disabled><span class="home-button__label">최신 보안 소식 보러가기</span></button>}
+    </div>
   </div>
-  {showMascot && <div class="home-image-slot home-hero__image"><Image src={shieldMascot} alt="방패를 들고 있는 미스터덕 마스코트" widths={[160, 320, 640, 960, 1254]} sizes="(max-width: 20rem) 96px, (max-width: 33.333rem) 30vw, (max-width: 48rem) 160px, (min-width: 75rem) 34.5rem, 45vw" loading="eager" /></div>}
+  {showMascot && <div class="home-image-slot home-hero__image"><Image src={shieldMascot} alt="방패를 들고 있는 미스터덕 마스코트" widths={[160, 320, 640, 960, 1254]} sizes="(max-width: 20rem) 96px, (max-width: 33.333rem) 30vw, (max-width: 720px) 160px, (min-width: 75rem) 34.5rem, 45vw" loading="eager" /></div>}
 </section>

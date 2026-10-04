@@ -27,6 +27,11 @@ const navPage = page ?? (Astro.url.pathname.startsWith(siteUrl("articles/")) ? "
     <a class="skip-link" href="#main">본문 바로가기</a>
     <header class="site-header" data-pagefind-ignore><div class="shell header-row">
       <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={60} height={60} widths={[60, 120, 180]} sizes="(max-width: 40rem) 3rem, 3.75rem" loading="eager" /><span class="brand__copy">Duckurity News</span></a>
+      <nav class="site-nav site-nav--desktop" aria-label="사이트 탐색" aria-hidden="true" inert>
+        <a href={siteUrl()} aria-current={navPage === "newsletter" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">홈</span></a>
+        <a href={siteUrl("archive/")} aria-current={navPage === "archive" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">전체 글</span></a>
+        <a href={siteUrl("about/")} aria-current={navPage === "about" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">소개</span></a>
+      </nav>
       <details class="site-menu">
         <summary class="site-menu__toggle" aria-label="메뉴 열기" aria-controls="site-navigation">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -45,7 +50,7 @@ const navPage = page ?? (Astro.url.pathname.startsWith(siteUrl("articles/")) ? "
     </div></header>
     <slot />
     <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row">
-      <a class="brand" href={siteUrl()}><Image class="footer-brand__logo" src={writeupLogo} alt="" widths={[64, 128, 256]} sizes="2.85rem" loading="lazy" /><span>Write-Up</span></a>
+      <div class="brand"><Image class="footer-brand__logo" src={writeupLogo} alt="" widths={[64, 128, 256]} sizes="2.85rem" loading="lazy" /><span>Write-Up</span></div>
     </div></footer>
     <button class="back-to-top" type="button" aria-label="맨 위로" title="맨 위로" data-pagefind-ignore hidden>
       <span class="back-to-top__icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6" /></svg></span>

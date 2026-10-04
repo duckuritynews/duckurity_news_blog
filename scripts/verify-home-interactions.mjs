@@ -8,6 +8,8 @@ class Element {
   addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
   fire(type, value = {}) { const event = { preventDefault() { this.defaultPrevented = true; }, stopPropagation() {}, ...value }; for (const listener of this.listeners[type] || []) listener(event); return event; }
   setAttribute(name, value) { this.attributes[name] = value; }
+  hasAttribute(name) { return Object.hasOwn(this.attributes, name); }
+  toggleAttribute(name, present) { if (present) this.attributes[name] = ""; else delete this.attributes[name]; }
   contains(element) { return this === element; }
   setPointerCapture(id) { this.pointer = id; }
   hasPointerCapture(id) { return this.pointer === id; }
@@ -123,4 +125,45 @@ top.tick(150); assert.equal(top.window.scrollY, 150); assert.equal(top.button.hi
 top.tick(300); assert.equal(top.window.scrollY, 0); assert.equal(top.button.hidden, true);
 top.window.scrollY = 1200; top.window.fire("scroll"); top.button.fire("click"); top.tick(350); top.window.fire("wheel"); const cancelled = top.window.scrollY; top.tick(600); assert.equal(top.window.scrollY, cancelled);
 const reducedTop = topClient(true); reducedTop.window.scrollY = 300; reducedTop.button.fire("click"); assert.equal(reducedTop.window.scrollY, 0);
+// Exercise measured desktop fit as well as the mobile cutoff and focus recovery.
+{
+  const menu = new Element(), toggle = new Element(), header = new Element(), row = new Element();
+  const nav = new Element(), brand = new Element(), window = new Element(), document = new Element();
+  let desktopWidth = true, headerHeight = 77, resize;
+  const properties = new Map();
+  document.documentElement = { style: { setProperty: (key, value) => properties.set(key, value) } };
+  document.activeElement = null;
+  document.querySelector = (selector) => selector === ".site-menu" ? menu : header;
+  header.querySelector = () => row;
+  row.querySelector = (selector) => selector === ".brand" ? brand : nav;
+  menu.querySelector = () => toggle; menu.querySelectorAll = () => [];
+  header.getBoundingClientRect = () => ({ height: headerHeight });
+  brand.getBoundingClientRect = () => ({ width: 300 });
+  nav.getBoundingClientRect = () => ({ width: 250 });
+  toggle.getBoundingClientRect = () => ({ width: 44 });
+  toggle.focus = () => { document.activeElement = toggle; };
+  window.matchMedia = (query) => { assert.equal(query, "(width > 850px)"); return { matches: desktopWidth }; };
+  row.clientWidth = 1100; nav.inert = true;
+  vm.runInNewContext(readFileSync(new URL("../src/scripts/header-menu-client.js", import.meta.url), "utf8"), {
+    document, window, getComputedStyle: () => ({ columnGap: "12px" }),
+    ResizeObserver: class { constructor(callback) { resize = callback; } observe() {} },
+  });
+  assert.equal(row.hasAttribute("data-expanded-navigation"), true);
+  assert.equal(nav.inert, false);
+  assert.equal(nav.attributes["aria-hidden"], "false");
+  document.activeElement = nav;
+  row.clientWidth = 617; resize();
+  assert.equal(row.hasAttribute("data-expanded-navigation"), false, "Interfering desktop links collapse before overlapping the brand");
+  assert.equal(nav.inert, true); assert.equal(document.activeElement, toggle);
+  row.clientWidth = 618; resize();
+  assert.equal(row.hasAttribute("data-expanded-navigation"), true, "Navigation expands when its full measured width fits");
+  desktopWidth = false; headerHeight = 65; window.fire("resize");
+  assert.equal(row.hasAttribute("data-expanded-navigation"), false, "Mobile retains the hamburger even when links could fit");
+  assert.equal(properties.get("--site-header-height"), "65px", "The floating return button follows the actual header height");
+  menu.open = true; menu.fire("toggle"); assert.equal(toggle.attributes["aria-label"], "메뉴 닫기");
+  menu.fire("keydown", { key: "Escape" }); assert.equal(menu.open, false); assert.equal(document.activeElement, toggle);
+  menu.open = true; document.fire("click", { target: brand }); assert.equal(menu.open, false);
+  menu.open = true; window.fire("pagehide"); assert.equal(menu.open, false);
+}
+console.log("Header interactions passed: measured fit/overflow, desktop/mobile resize, focus recovery, header-height tracking, Escape and outside click.");
 console.log("Home interactions passed: weekly pagination, swipe/tap/vertical scroll/cancellation, three-second inactivity, manual controls, wraparound, focus/visibility/pause/BFCache and 300ms back-to-top.");
