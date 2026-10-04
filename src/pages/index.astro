@@ -7,16 +7,17 @@ import { articleCardData } from "../lib/article-card-data";
 import { featuredArticleData } from "../lib/featured-article-data";
 import { getCollection } from "astro:content";
 import { getPublicArticles, orderPublicArticles } from "../lib/articles";
+import { splitLatestPublicationWeek } from "../lib/article-week";
 
 const ordered = orderPublicArticles(getPublicArticles(await getCollection("articles")), "latest");
-const latest = ordered[0];
-const featured = latest ? await featuredArticleData(latest) : undefined;
-const previousArticles = await Promise.all(ordered.slice(1, 7).map(articleCardData));
+const { weekly, previous } = splitLatestPublicationWeek(ordered);
+const featured = await Promise.all(weekly.map(featuredArticleData));
+const previousArticles = await Promise.all(previous.slice(0, 6).map(articleCardData));
 ---
 <SiteLayout title="홈 | Duckurity News" description="이번 주 보안 소식과 이전에 게시된 이야기를 만나보세요." page="newsletter">
   <main id="main" class="site-main shell">
-    <HomeHero articleHref={featured?.href} />
-    <FeaturedArticle article={featured} />
+    <HomeHero showMascot />
+    <FeaturedArticle articles={featured} />
     <section class="newsletter-previous" aria-labelledby="previous-articles-title">
       <div class="home-section-heading"><h2 id="previous-articles-title">더 읽어볼까요?</h2></div>
       <ol class="article-list" id="newsletter-articles">{previousArticles.map((article) => <ArticleCard article={article} compact />)}</ol>

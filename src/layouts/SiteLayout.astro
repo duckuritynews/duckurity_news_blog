@@ -4,6 +4,7 @@ import "../styles/home.css";
 import { siteUrl } from "../lib/urls";
 import { Image } from "astro:assets";
 import faceLogo from "../assets/brand/mrduck-profile.png";
+import writeupLogo from "../assets/brand/Writeup-logo.webp";
 interface Props { title: string; description: string; page?: "newsletter" | "archive" | "about" }
 const { title, description, page } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
@@ -26,20 +27,29 @@ const navPage = page ?? (Astro.url.pathname.startsWith(siteUrl("articles/")) ? "
     <a class="skip-link" href="#main">본문 바로가기</a>
     <header class="site-header" data-pagefind-ignore><div class="shell header-row">
       <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={60} height={60} widths={[60, 120, 180]} sizes="(max-width: 40rem) 3rem, 3.75rem" loading="eager" /><span class="brand__copy">Duckurity News</span></a>
-      <nav class="site-nav" aria-label="사이트 탐색">
+      <details class="site-menu">
+        <summary class="site-menu__toggle" aria-label="메뉴 열기" aria-controls="site-navigation">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </summary>
+      <nav class="site-nav" id="site-navigation" aria-label="사이트 탐색">
         <a href={siteUrl()} aria-current={navPage === "newsletter" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">홈</span></a>
         <a href={siteUrl("archive/")} aria-current={navPage === "archive" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">전체 글</span></a>
         <a href={siteUrl("about/")} aria-current={navPage === "about" ? "page" : undefined}><span class="site-nav__glass" data-liquid-glass="nav" aria-hidden="true"></span><span class="site-nav__label">소개</span></a>
+        <hr class="site-nav__separator" />
+        <a class="site-nav__instagram" href="https://www.instagram.com/duckurity._.news/" aria-label="Duckurity News 인스타그램">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>
+          <span class="site-nav__label">인스타그램</span>
+        </a>
       </nav>
+      </details>
     </div></header>
     <slot />
     <footer class="site-footer" data-pagefind-ignore><div class="shell footer-row">
-      <a class="brand" href={siteUrl()}><Image class="brand__logo" src={faceLogo} alt="" width={48} height={48} widths={[48, 96, 144]} sizes="3rem" loading="lazy" /><span>Duckurity News</span></a>
-      <a class="footer-instagram" data-liquid-glass="control" href="https://www.instagram.com/duckurity._.news/" aria-label="Duckurity News 인스타그램">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>
-        <span>@duckurity._.news</span>
-      </a>
+      <a class="brand" href={siteUrl()}><Image class="footer-brand__logo" src={writeupLogo} alt="" widths={[64, 128, 256]} sizes="2.85rem" loading="lazy" /><span>Write-Up</span></a>
     </div></footer>
-    <script>import "../scripts/liquid-glass-client.js";</script>
+    <button class="back-to-top" type="button" aria-label="맨 위로" title="맨 위로" data-pagefind-ignore hidden>
+      <span class="back-to-top__icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6" /></svg></span>
+    </button>
+    <script>import "../scripts/header-menu-client.js"; import "../scripts/liquid-glass-client.js"; import "../scripts/back-to-top-client.js";</script>
   </body>
 </html>

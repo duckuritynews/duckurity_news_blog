@@ -11,18 +11,29 @@ const catalog = await articleCatalog(getPublicArticles(await getCollection("arti
 const ordered = sortArticles(catalog, "latest");
 const pageCount = Math.max(1, Math.ceil(ordered.length / archivePageSizes.cards));
 const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
+const searchRevision = Date.now().toString(36);
 ---
 <SiteLayout title="전체 글 | Duckurity News" description="기사를 검색하고 최신순, 오래된순, 가나다순으로 찾아보세요." page="archive">
+  <Fragment slot="head">
+    <script is:inline>
+      const archiveParams = new URLSearchParams(location.search);
+      if (["q", "sort", "view", "page"].some((key) => archiveParams.has(key))) document.documentElement.dataset.archiveRestoring = "true";
+    </script>
+    <style is:inline>html[data-archive-restoring] .home-archive { visibility: hidden; }</style>
+  </Fragment>
   <main id="main" class="site-main shell">
     <section class="home-archive" id="article-archive" aria-labelledby="archive-title">
       <div class="home-section-heading"><h1 id="archive-title">전체 글</h1></div>
-      <form class="controls" id="article-controls" role="search" action={siteUrl("archive/")}>
+      <form class="controls archive-search-form archive-search-form--with-button" id="article-controls" role="search" action={siteUrl("archive/")}>
         <label class="search-field" for="article-search"><span class="sr-only">통합 검색</span><input id="article-search" name="q" type="search" placeholder="통합 검색 ㅣ 제목, 본문, 키워드" autocomplete="off" /></label>
-        <div class="control-row"><label class="sort-field" for="article-sort">정렬<select id="article-sort" name="sort"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select></label><button class="button" data-liquid-glass="primary" type="submit">검색</button></div>
+        <button class="button" data-liquid-glass="primary" type="submit">검색</button>
       </form>
       <div class="archive-results-toolbar">
-        <p id="search-status" class="status" role="status" aria-live="polite">{`${catalog.length}개 결과 · 최신순 · 1페이지`}{catalog.length === 0 && " · 아직 게시된 기사가 없습니다."}</p>
-        <div class="archive-view-controls" role="group" aria-label="기사 보기 방식"><button class="home-button" data-liquid-glass="control" type="button" id="view-cards" aria-pressed="true" aria-label="카드 보기" title="카드 보기"><img src={siteUrl("icons/view-grid.svg")} alt="" width="24" height="24" /></button><button class="home-button" data-liquid-glass="control" type="button" id="view-list" aria-pressed="false" aria-label="목록 보기" title="목록 보기"><img src={siteUrl("icons/view-list.svg")} alt="" width="24" height="24" /></button></div>
+        <p id="search-status" class="status" role="status" aria-live="polite"><strong>{catalog.length}</strong>개 결과{pageCount > 1 && ` · 1 / ${pageCount}페이지`}</p>
+        <div class="archive-toolbar-actions">
+          <label class="sort-field archive-sort-field" for="article-sort"><span class="sr-only">정렬</span><select id="article-sort" name="sort" form="article-controls"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select></label>
+          <div class="archive-view-controls" role="group" aria-label="기사 보기 방식"><button class="home-button" data-liquid-glass="control" type="button" id="view-cards" aria-pressed="true" aria-label="카드 보기" title="카드 보기"><img src={siteUrl("icons/view-grid.svg")} alt="" width="24" height="24" /></button><button class="home-button" data-liquid-glass="control" type="button" id="view-list" aria-pressed="false" aria-label="목록 보기" title="목록 보기"><img src={siteUrl("icons/view-list.svg")} alt="" width="24" height="24" /></button></div>
+        </div>
       </div>
       <div id="empty-state" class="empty-state" hidden={catalog.length > 0}>새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.</div>
       <noscript><p class="noscript-note">검색·정렬·보기 전환·전체 페이지 탐색에는 JavaScript가 필요합니다. 아래 기사 링크는 사용할 수 있습니다.</p></noscript>
@@ -32,7 +43,7 @@ const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
       </nav>
     </section>
     <script type="application/json" id="article-catalog" set:html={safeCatalog}></script>
-    <div id="search-config" data-pagefind-path={siteUrl("pagefind/pagefind.js")} hidden></div>
+    <div id="search-config" data-pagefind-path={siteUrl("pagefind/pagefind.js")} data-search-revision={searchRevision} hidden></div>
     <script>import "../scripts/search-client.js";</script>
   </main>
 </SiteLayout>

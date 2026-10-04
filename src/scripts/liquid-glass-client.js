@@ -61,5 +61,5 @@ new MutationObserver((mutations) => {
   subtree: true,
   childList: true,
   attributes: true,
-  attributeFilter: ["hidden", "disabled", "aria-disabled"],
+  attributeFilter: ["hidden", "disabled", "aria-disabled", "open"],
 });
