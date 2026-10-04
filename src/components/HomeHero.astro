@@ -9,11 +9,12 @@ const { showMascot = false, articleHref } = Astro.props;
 <section class:list={["home-hero", { "home-hero--text-only": !showMascot }]} aria-labelledby="page-title">
   <div class="home-hero__copy">
     <span class="home-badge home-badge--weekly">MR.DUCK'S WEEKLY LETTER</span>
-    <h1 id="page-title">{home.title}</h1>
-    <p>{home.description}</p>
+    <h1 id="page-title" aria-label={home.title} data-preferred-wrap>{home.titleLines.map((line) => <><span class="home-copy__line">{line}</span>{" "}</>)}</h1>
+    <p data-preferred-wrap>{home.descriptionLines.map((groups) => <><span class="home-copy__line">{groups.map((group) => <><span class="home-copy__group">{group}</span>{" "}</>)}</span>{" "}</>)}</p>
     <div class="home-actions">
-      {articleHref ? <a class="home-button home-button--coral" data-liquid-glass="primary" href={articleHref}><span class="home-button__label">최신 보안 소식 보러가기</span><span aria-hidden="true"> →</span></a> : <button class="home-button" disabled><span class="home-button__label">최신 보안 소식 보러가기</span></button>}
+      {articleHref ? <a class="home-button home-button--coral" data-liquid-glass="primary" href={articleHref} aria-label={home.latestArticleLabel}><span class="home-button__label" data-preferred-wrap>{home.latestArticleLines.map((line) => <><span class="home-copy__line">{line}</span>{" "}</>)}</span><span aria-hidden="true"> →</span></a> : <button class="home-button" disabled aria-label={home.latestArticleLabel}><span class="home-button__label" data-preferred-wrap>{home.latestArticleLines.map((line) => <><span class="home-copy__line">{line}</span>{" "}</>)}</span></button>}
     </div>
   </div>
   {showMascot && <div class="home-image-slot home-hero__image"><Image src={shieldMascot} alt="방패를 들고 있는 미스터덕 마스코트" widths={[160, 320, 640, 960, 1254]} sizes="(max-width: 20rem) 96px, (max-width: 33.333rem) 30vw, (max-width: 720px) 160px, (min-width: 75rem) 34.5rem, 45vw" loading="eager" /></div>}
 </section>
+<script>import "../scripts/home-copy-client.js";</script>
