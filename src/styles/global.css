@@ -70,7 +70,7 @@ button, select, input[type="search"] { min-height: 2.75rem; }
 .noscript-note { padding: 0.75rem 1rem; background: var(--accent-soft); border-radius: 0.6rem; }
 .page-link[aria-disabled="true"] { color: var(--muted); background: var(--surface-soft); border-color: var(--border); border-style: dashed; cursor: not-allowed; pointer-events: none; }
 .article-header { margin-bottom: var(--space-4); }
-.article-header h1 { margin: 0.35rem 0 0.8rem; font-size: 44px; line-height: 1.12; letter-spacing: -0.035em; word-break: keep-all; overflow-wrap: break-word; }
+.article-header h1 { margin: 0.35rem 0 0.8rem; font-size: 32px; line-height: 1.12; letter-spacing: -0.035em; word-break: keep-all; overflow-wrap: break-word; }
 .article-summary { color: var(--muted); font-size: clamp(1.1rem, 4vw, 1.3rem); line-height: 1.55; overflow-wrap: anywhere; }
 .cover { margin: var(--space-4) 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); }
 .key-points { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); background: #fff4d6; border-radius: var(--radius); overflow-wrap: anywhere; }
