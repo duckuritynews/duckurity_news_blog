@@ -70,7 +70,8 @@ export async function verifyClientStates(options) {
   const pageSize = view === "list" ? 20 : 18;
   const empty = await createClient({ ...options, catalog: [], search: () => { throw Error("Empty catalog must not load an index"); } });
   empty.query("anything"); await empty.settled();
-  assert.match(empty.elements["search-status"].textContent, /아직 게시된 기사가 없습니다/);
+  assert.equal(empty.elements["search-status"].textContent, "0개 결과");
+  assert.match(empty.elements["empty-state"].textContent, /아직 게시된 기사가 없습니다/);
   assert.equal(empty.elements["empty-state"].hidden, false);
   assert.equal(empty.effects.errors.length, 0);
   assert.equal(empty.effects.focus.length, 0);
@@ -94,7 +95,8 @@ export async function verifyClientStates(options) {
     assert.equal(link.getAttribute("aria-labelledby"), heading.id, "The card's accessible link name must be its title");
   }
   real.query("CVE-2999-99999"); await real.settled();
-  assert.match(real.elements["search-status"].textContent, /일치하는 기사가 없습니다/);
+  assert.equal(real.elements["search-status"].textContent, "0개 결과");
+  assert.match(real.elements["empty-state"].textContent, /일치하는 기사가 없습니다/);
   assert.doesNotMatch(real.elements["empty-state"].textContent, /게시된 기사가 없/);
   assert.equal(real.titles().length, 0); assert.equal(calls, 0);
   const clearSearch = real.elements["empty-state"].querySelector("#clear-search");
@@ -143,7 +145,7 @@ export async function verifyClientStates(options) {
     const pages = Math.max(1, Math.ceil(expectedTitles.length / pageSize));
     assert.equal(dataCalls - startData, Math.min(pageSize, expectedTitles.length));
     assert.equal(real.elements["page-status"].textContent, `1 / ${pages}`);
-    assert.match(real.elements["search-status"].textContent, / · 1페이지$/);
+    assert.equal(real.elements["search-status"].textContent, `${expectedTitles.length}개 결과${pages > 1 ? ` · 1 / ${pages}페이지` : ""}`, "Only multi-page results should show page information; sort remains in its control");
     const visited = [...real.titles()];
     for (let page = 2; page <= pages; page++) {
       const focused = real.effects.focus.length;
@@ -152,7 +154,7 @@ export async function verifyClientStates(options) {
       assert.equal(real.effects.focus.at(-1), "article-results");
       assert.equal(real.effects.scroll.length, real.effects.focus.filter((id) => id === "article-results").length);
       assert.equal(real.elements["page-status"].textContent, `${page} / ${pages}`);
-      assert.ok(real.elements["search-status"].textContent.endsWith(` · ${page}페이지`), "Result status must follow the current page");
+      assert.equal(real.elements["search-status"].textContent, `${expectedTitles.length}개 결과 · ${page} / ${pages}페이지`, "Result status must follow the current and total page counts");
       visited.push(...real.titles());
     }
     assert.deepEqual(visited, expectedTitles);
@@ -253,7 +255,8 @@ export async function verifyClientStates(options) {
   controlled.query("new"); await controlled.until(() => pending.has("new"));
   pending.get("new").resolve({ results: [] }); await controlled.settled();
   pending.get("slow").reject(Error("Stale failure")); await nextTurn();
-  assert.match(controlled.elements["search-status"].textContent, /“new”/);
+  assert.equal(controlled.elements["search-status"].textContent, "0개 결과");
+  assert.match(controlled.elements["empty-state"].textContent, /“new”/);
   assert.equal(controlled.effects.errors.length, 1);
   assert.equal(controlled.effects.focus.length, 0);
 

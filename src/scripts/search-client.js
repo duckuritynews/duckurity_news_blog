@@ -92,7 +92,9 @@ function setStatus(text, kind = "normal", count) {
 }
 function setEmptyState(state) {
   const message = document.createElement("p");
-  message.textContent = catalog.length ? "다른 검색어로 검색하거나 전체 글을 확인해 보세요." : "새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
+  message.textContent = catalog.length
+    ? `${state.query ? `“${state.query}”와 일치하는 기사가 없습니다. ` : ""}다른 검색어로 검색하거나 전체 글을 확인해 보세요.`
+    : "아직 게시된 기사가 없습니다. 새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
   emptyState.replaceChildren(message);
   if (!catalog.length || !state.query) return;
   const actions = document.createElement("div"); actions.className = "empty-state__actions";
@@ -164,8 +166,7 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     resultsList.setAttribute("aria-label", `보안 뉴스 목록 · ${state.page} / ${pageCount} 페이지`);
     emptyState.hidden = count !== 0;
     setEmptyState(state);
-    const resultStatus = `개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"} · ${state.page}페이지`;
-    setStatus(count === 0 ? `${resultStatus} · ${catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다."}` : resultStatus, "normal", count);
+    setStatus(`개 결과${pageCount > 1 ? ` · ${state.page} / ${pageCount}페이지` : ""}`, "normal", count);
     setPages(state.page, pageCount, state); if (address) updateAddress(state, true);
     if (moveToResults && count) {
       resultsList.focus({ preventScroll: true });

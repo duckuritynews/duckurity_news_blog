@@ -21,7 +21,7 @@ const safeCatalog = JSON.stringify(catalog).replaceAll("<", "\\u003c");
         <div class="control-row"><label class="sort-field" for="article-sort">정렬<select id="article-sort" name="sort"><option value="latest">최신순</option><option value="oldest">오래된순</option><option value="title">가나다순</option></select></label><button class="button" data-liquid-glass="primary" type="submit">검색</button></div>
       </form>
       <div class="archive-results-toolbar">
-        <p id="search-status" class="status" role="status" aria-live="polite"><strong>{catalog.length}</strong>개 결과 · 최신순 · 1페이지{catalog.length === 0 && " · 아직 게시된 기사가 없습니다."}</p>
+        <p id="search-status" class="status" role="status" aria-live="polite"><strong>{catalog.length}</strong>개 결과{pageCount > 1 && ` · 1 / ${pageCount}페이지`}</p>
         <div class="archive-view-controls" role="group" aria-label="기사 보기 방식"><button class="home-button" data-liquid-glass="control" type="button" id="view-cards" aria-pressed="true" aria-label="카드 보기" title="카드 보기"><img src={siteUrl("icons/view-grid.svg")} alt="" width="24" height="24" /></button><button class="home-button" data-liquid-glass="control" type="button" id="view-list" aria-pressed="false" aria-label="목록 보기" title="목록 보기"><img src={siteUrl("icons/view-list.svg")} alt="" width="24" height="24" /></button></div>
       </div>
       <div id="empty-state" class="empty-state" hidden={catalog.length > 0}>새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.</div>
