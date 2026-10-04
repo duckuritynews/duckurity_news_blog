@@ -6,6 +6,7 @@ import vm from "node:vm";
 import { gunzipSync } from "node:zlib";
 import { sortArticles } from "../src/lib/article-sort.ts";
 import { firstImageFromHtml } from "../src/lib/first-image.ts";
+import { verifyArticleReturn } from "./verify-client-states.mjs";
 
 // Exercise the shipped static files and client bundle without a browser dependency.
 const root = resolve(process.argv[2] || "dist");
@@ -81,6 +82,10 @@ recent.forEach((card, index) => {
 const latest = sortArticles(catalog, "latest")[0];
 for (const article of catalog) {
   const detailHtml = readFileSync(localFile(article.href), "utf8");
+  const summaryPosition = detailHtml.indexOf('class="key-points"');
+  const coverPosition = detailHtml.indexOf('class="cover"');
+  assert.ok(detailHtml.indexOf('class="article-meta"') < summaryPosition && summaryPosition < detailHtml.indexOf('class="prose"'), "Key points must appear between author information and the body");
+  if (coverPosition !== -1) assert.ok(summaryPosition < coverPosition, "Key points must precede the cover image");
   const coverHtml = detailHtml.match(/<figure class="cover">([\s\S]*?)<\/figure>/)?.[1];
   const proseHtml = detailHtml.match(/class="prose"[^>]*>([\s\S]*?)<footer class="sources"/)[1];
   if (coverHtml) {
@@ -93,6 +98,16 @@ for (const article of catalog) {
     assert.equal(Boolean(article.thumbnail), Boolean(bodyImage), "Archive must use the same body-image fallback as home");
     if (bodyImage) for (const key of ["src", "alt", "width", "height"]) assert.equal(article.thumbnail[key], bodyImage[key]);
   }
+}
+if (catalog.length) {
+  const detail = readFileSync(localFile(catalog[0].href), "utf8");
+  const scripts = [...detail.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map((match) => {
+    const src = match[1].match(/src="([^"]+)"/);
+    return src ? readFileSync(localFile(src[1]), "utf8") : match[2];
+  });
+  const returnClient = scripts.find((source) => source.includes("duckurity:archive-return"));
+  assert.ok(returnClient, "Article return script must be shipped");
+  verifyArticleReturn({ source: returnClient, base });
 }
 if (latest) {
   assert.ok(newsletterHtml.includes(`class="home-feature__card" href="${latest.href}"`));

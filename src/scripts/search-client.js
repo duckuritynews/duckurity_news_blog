@@ -49,6 +49,15 @@ function makeCard(article) {
   const item = document.createElement("li"); item.className = "article-card";
   const link = document.createElement("a"); link.className = "article-card__link";
   link.href = article.href || articleUrl(article.slug);
+  link.addEventListener("click", () => {
+    // Retain the exact archive context even when the browser suppresses referrers.
+    try {
+      sessionStorage.setItem("duckurity:archive-return", JSON.stringify({
+        articlePath: new URL(link.href, document.baseURI).pathname,
+        archiveUrl: stateAddress(requestedState || queryState()),
+      }));
+    } catch { /* Navigation still works when browser storage is unavailable. */ }
+  });
   const titleId = `article-card-title-${article.slug}`; link.setAttribute("aria-labelledby", titleId);
   const media = document.createElement("div"); media.className = "article-card__media";
   if (article.thumbnail) {
@@ -73,7 +82,14 @@ function makeCard(article) {
   const footer = document.createElement("div"); footer.className = "article-card__footer"; footer.append(tags, read);
   body.append(meta, heading, summary, footer); link.append(media, body); item.append(link); return item;
 }
-function setStatus(text, kind = "normal") { status.replaceChildren(document.createTextNode(text)); status.dataset.kind = kind; }
+function setStatus(text, kind = "normal", count) {
+  if (count === undefined) status.replaceChildren(document.createTextNode(text));
+  else {
+    const number = document.createElement("strong"); number.textContent = String(count);
+    status.replaceChildren(number, document.createTextNode(text));
+  }
+  status.dataset.kind = kind;
+}
 function setEmptyState(state) {
   const message = document.createElement("p");
   message.textContent = catalog.length ? "다른 검색어로 검색하거나 전체 글을 확인해 보세요." : "새 기사를 준비하고 있습니다. 나중에 다시 방문해 주세요.";
@@ -126,6 +142,8 @@ function getMatches(query, sort) {
 }
 async function render(state, { address = false, replaceAddress = false, moveToResults = false } = {}) {
   state.view = normalizeView(state.view);
+  // Save controls before awaiting Pagefind so leaving during a search keeps its URL.
+  if (address) updateAddress(state, replaceAddress);
   const pageSize = archivePageSizes[state.view];
   requestedState = { ...state };
   const request = ++activeRequest; input.value = state.query; sortControl.value = state.sort; emptyState.hidden = true;
@@ -146,9 +164,9 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     resultsList.setAttribute("aria-label", `보안 뉴스 목록 · ${state.page} / ${pageCount} 페이지`);
     emptyState.hidden = count !== 0;
     setEmptyState(state);
-    const resultStatus = `${count}개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"} · ${state.page}페이지`;
-    setStatus(count === 0 ? `${resultStatus} · ${catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다."}` : resultStatus);
-    setPages(state.page, pageCount, state); if (address) updateAddress(state, replaceAddress);
+    const resultStatus = `개 결과 · ${state.sort === "oldest" ? "오래된순" : state.sort === "title" ? "가나다순" : "최신순"} · ${state.page}페이지`;
+    setStatus(count === 0 ? `${resultStatus} · ${catalog.length ? `“${state.query}”와 일치하는 기사가 없습니다.` : "아직 게시된 기사가 없습니다."}` : resultStatus, "normal", count);
+    setPages(state.page, pageCount, state); if (address) updateAddress(state, true);
     if (moveToResults && count) {
       resultsList.focus({ preventScroll: true });
       resultsList.scrollIntoView({ block: "start", behavior: "instant" });
@@ -158,7 +176,6 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     lastSearch = undefined;
     resultsList.setAttribute("aria-busy", "false");
     resultsList.replaceChildren(); emptyState.hidden = true; pagination.hidden = true;
-    if (address) updateAddress(state, replaceAddress);
     setStatus("검색 색인을 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.", "error");
     const retry = document.createElement("button"); retry.type = "button"; retry.className = "button"; retry.textContent = "다시 시도";
     retry.dataset.liquidGlass = "control";
@@ -173,5 +190,7 @@ input.addEventListener("input", (event) => { if (!composing && !event.isComposin
 sortControl.addEventListener("change", () => render(controlsState(), { address: true }));
 for (const [control, view] of [[cardsControl, "cards"], [listControl, "list"]]) control.addEventListener("click", () => { if (requestedState?.view !== view) render({ ...controlsState(), view }, { address: true }); });
 for (const [link, direction] of [[previous, -1], [next, 1]]) link.addEventListener("click", (event) => { event.preventDefault(); if (link.getAttribute("aria-disabled") === "true") return; const state = requestedState || queryState(); render({ ...state, page: state.page + direction }, { address: true, moveToResults: true }); });
-window.addEventListener("popstate", () => render(queryState()));
+window.addEventListener("popstate", () => render(queryState(), { address: true, replaceAddress: true }));
+window.addEventListener("pagehide", () => { ++activeRequest; composing = false; });
+window.addEventListener("pageshow", (event) => { if (event.persisted) render(queryState(), { address: true, replaceAddress: true }); });
 render(queryState(), { address: true, replaceAddress: true });
