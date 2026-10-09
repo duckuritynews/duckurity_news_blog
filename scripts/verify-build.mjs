@@ -87,10 +87,13 @@ recent.forEach((card, index) => {
 const latest = sortArticles(catalog, "latest")[0];
 for (const article of catalog) {
   const detailHtml = readFileSync(localFile(article.href), "utf8");
+  assert.doesNotMatch(detailHtml, /<p class="eyebrow">/, "Article headers must not display a briefing or level label");
   const summaryPosition = detailHtml.indexOf('class="key-points"');
   const coverPosition = detailHtml.indexOf('class="cover"');
-  assert.ok(detailHtml.indexOf('class="article-meta"') < summaryPosition && summaryPosition < detailHtml.indexOf('class="prose"'), "Key points must appear between author information and the body");
-  if (coverPosition !== -1) assert.ok(summaryPosition < coverPosition, "Key points must precede the cover image");
+  if (summaryPosition !== -1) {
+    assert.ok(detailHtml.indexOf('class="article-meta"') < summaryPosition && summaryPosition < detailHtml.indexOf('class="prose"'), "Key points must appear between author information and the body");
+    if (coverPosition !== -1) assert.ok(summaryPosition < coverPosition, "Key points must precede the cover image");
+  }
   const coverHtml = detailHtml.match(/<figure class="cover">([\s\S]*?)<\/figure>/)?.[1];
   const proseHtml = detailHtml.match(/class="prose"[^>]*>([\s\S]*?)<footer class="sources"/)[1];
   if (coverHtml) {
@@ -221,7 +224,7 @@ await client.evaluate();
 async function settled() {
   for (let i = 0; i < 250; i++) {
     await new Promise((done) => setTimeout(done, 20));
-    if (!elements["search-status"].textContent.includes("중입니다")) {
+    if (elements["article-results"].getAttribute("aria-busy") === "false") {
       assert.notEqual(elements["search-status"].dataset.kind, "error");
       return;
     }

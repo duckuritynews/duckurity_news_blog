@@ -183,13 +183,16 @@ function paintResults(state, count, articles, { address, moveToResults }) {
     resultsList.scrollIntoView({ block: "start", behavior: "instant" });
   }
 }
-async function render(state, { address = false, replaceAddress = false, moveToResults = false, restorePosition = false } = {}) {
+async function render(state, { address = false, replaceAddress = false, moveToResults = false, restorePosition = false, restoreInput = false } = {}) {
   state.view = normalizeView(state.view);
   // Save controls before awaiting Pagefind so leaving during a search keeps its URL.
   if (address) updateAddress(state, replaceAddress);
   const pageSize = archivePageSizes[state.view];
   requestedState = { ...state };
-  const request = ++activeRequest; input.value = state.query; sortControl.value = state.sort; emptyState.hidden = true;
+  const request = ++activeRequest;
+  // Only navigation restores the input; live searches must preserve spaces and the caret.
+  if (restoreInput) input.value = state.query;
+  sortControl.value = state.sort; emptyState.hidden = true;
   resultsList.dataset.view = state.view;
   cardsControl.setAttribute("aria-pressed", state.view === "cards" ? "true" : "false");
   listControl.setAttribute("aria-pressed", state.view === "list" ? "true" : "false");
@@ -200,7 +203,7 @@ async function render(state, { address = false, replaceAddress = false, moveToRe
     return;
   }
   resultsList.setAttribute("aria-busy", "true");
-  setStatus(state.query ? "검색 결과를 불러오는 중입니다." : "기사 목록을 정렬하는 중입니다.");
+  setStatus("");
   try {
     const matches = await getMatches(state.query, state.sort); if (request !== activeRequest) return;
     const count = matches.count; const pageCount = Math.max(1, Math.ceil(count / pageSize));
@@ -229,11 +232,11 @@ input.addEventListener("input", (event) => { if (!composing && !event.isComposin
 sortControl.addEventListener("change", () => render(controlsState(), { address: true }));
 for (const [control, view] of [[cardsControl, "cards"], [listControl, "list"]]) control.addEventListener("click", () => { if (requestedState?.view !== view) render({ ...controlsState(), view }, { address: true }); });
 for (const [link, direction] of [[previous, -1], [next, 1]]) link.addEventListener("click", (event) => { event.preventDefault(); if (link.getAttribute("aria-disabled") === "true") return; const state = requestedState || queryState(); render({ ...state, page: state.page + direction }, { address: true, moveToResults: true }); });
-window.addEventListener("popstate", () => render(queryState(), { address: true, replaceAddress: true }));
+window.addEventListener("popstate", () => render(queryState(), { address: true, replaceAddress: true, restoreInput: true }));
 window.addEventListener("pagehide", () => {
   ++activeRequest; composing = false;
   const state = queryState(), saved = readSnapshot(state);
   if (saved) saveSnapshot(state, saved.count, saved.articles);
 });
-window.addEventListener("pageshow", (event) => { if (event.persisted) render(queryState(), { address: true, replaceAddress: true, restorePosition: true }); });
-render(queryState(), { address: true, replaceAddress: true, restorePosition: true });
+window.addEventListener("pageshow", (event) => { if (event.persisted) render(queryState(), { address: true, replaceAddress: true, restorePosition: true, restoreInput: true }); });
+render(queryState(), { address: true, replaceAddress: true, restorePosition: true, restoreInput: true });

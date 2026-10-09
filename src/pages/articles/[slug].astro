@@ -20,19 +20,18 @@ const updated = data.updatedAt ? new Date(data.updatedAt) : undefined;
   <main id="main" class="site-main"><article class="article-width">
     <header class="article-header">
       <div class="article-header__back-slot"><a class="article-header__back" data-liquid-glass="control" href={siteUrl("archive/")} aria-label="돌아가기"><span aria-hidden="true">←</span> 돌아가기</a></div>
-      <p class="eyebrow">{data.level ?? "보안 브리핑"}</p>
       <h1 data-pagefind-body data-pagefind-meta="title">{data.title}</h1>
       <p class="article-summary" data-pagefind-body data-pagefind-meta="summary">{data.summary}</p>
       <div class="article-meta"><span>작성: {data.authors.join(", ")}</span><span>게시 <time datetime={published.toISOString()}>{published.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>{updated && <span>수정 <time datetime={updated.toISOString()}>{updated.toLocaleDateString("ko-KR", { timeZone: "UTC" })}</time></span>}</div>
       <ul class="tags" aria-label="기사 태그">{data.tags.map((tag) => <li class="tag">{tag}</li>)}</ul>
-      <section class="key-points" aria-labelledby="key-points-title"><h2 id="key-points-title">핵심 3줄</h2><ol>{data.keyPoints.map((point) => <li>{point}</li>)}</ol></section>
+      {data.keyPoints.length > 0 && <section class="key-points" aria-labelledby="key-points-title"><h2 id="key-points-title">핵심 3줄</h2><ol>{data.keyPoints.map((point) => <li>{point}</li>)}</ol></section>}
       {data.cover && <figure class="cover"><Image src={data.cover} alt={data.coverAlt ?? ""} widths={[640, 960, 1280]} sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)" /></figure>}
     </header>
     <span class="sr-only" aria-hidden="true" data-pagefind-sort={`latestRank:${rank.latestRank}`}></span>
     <span class="sr-only" aria-hidden="true" data-pagefind-sort={`oldestRank:${rank.oldestRank}`}></span>
     <span class="sr-only" aria-hidden="true" data-pagefind-sort={`titleKoRank:${rank.titleKoRank}`}></span>
     <div class="prose" data-pagefind-body><p class="sr-only" aria-hidden="true">{data.tags.join(" ")} {data.searchAliases.join(" ")} {data.cveIds.join(" ")}</p><Content /></div>
-    <footer class="sources"><p>출처와 확인 시점을 확인하고 원문을 함께 표시합니다.</p><ul>{data.searchAliases.map((alias) => <li>관련 검색어: {alias}</li>)}{data.cveIds.map((id) => <li><a href={`https://nvd.nist.gov/vuln/detail/${id}`}>{id} · NVD</a></li>)}</ul></footer>
+    <footer class="sources"><ul>{data.searchAliases.map((alias) => <li>관련 검색어: {alias}</li>)}{data.cveIds.map((id) => <li><a href={`https://nvd.nist.gov/vuln/detail/${id}`}>{id} · NVD</a></li>)}</ul></footer>
   </article></main>
   <script>import "../../scripts/article-return-client.js";</script>
   <Fragment slot="head">

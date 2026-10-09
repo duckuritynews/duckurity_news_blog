@@ -1,4 +1,5 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -82,7 +83,12 @@ try {
     const coverFields = i === 0 ? ["cover: ./images/cover.svg", "coverAlt: Explicit featured cover"] : i === 11 ? ["cover: ./images/landscape.svg", "coverAlt: Synthetic landscape thumbnail"] : [];
     const frontmatter = ["---", `slug: ${json(slug)}`, `title: ${json(titles[i])}`, `summary: ${json(summary)}`, `publishedAt: ${json(publishedAt)}`, "draft: false", `authors: ${json(["Duckurity UI fixture"])}`, `tags: ${json(tags[i])}`, `keyPoints: ${json(keyPoints)}`, `level: ${json(i % 2 ? "\uC911\uAE09" : "\uCD08\uAE09")}`, `searchAliases: ${json([`fixture-${i + 1}`])}`, `cveIds: ${json(cveIds)}`, ...coverFields, "---", ""].join("\n");
     const articleDir = join(fixtureRoot, slug); mkdirSync(articleDir, { recursive: true });
-    writeFileSync(join(articleDir, "index.md"), frontmatter + body, "utf8");
+    // Cover omitted, empty, and whitespace-only summaries alongside full summaries.
+    const optionalSummaryFrontmatter = i === 0 ? frontmatter.replace(/^keyPoints:.*\n/m, "")
+      : i === 1 ? frontmatter.replace(/^keyPoints:.*$/m, "keyPoints: []")
+      : i === 2 ? frontmatter.replace(/^keyPoints:.*$/m, 'keyPoints: [" ", "", "  "]')
+      : frontmatter;
+    writeFileSync(join(articleDir, "index.md"), optionalSummaryFrontmatter + body, "utf8");
     if (i === 11) {
       for (const [name, metadata] of [["unpublished-draft", "draft: true"], ["unpublished-future", 'publishedAt: "2999-01-01T00:00:00Z"']]) {
         const hiddenDir = join(fixtureRoot, name); mkdirSync(hiddenDir, { recursive: true });
@@ -106,6 +112,11 @@ try {
   process.stdout.write(built.stdout || ""); process.stderr.write(built.stderr || "");
   if (built.status !== 0) process.exitCode = built.status ?? 1;
   else {
+    for (const [slug, expected] of [["sample-01", false], ["sample-02", false], ["sample-03", false], ["sample-04", true]]) {
+      const detail = readFileSync(join(outDir, "articles", slug, "index.html"), "utf8");
+      assert.equal(detail.includes('class="key-points"'), expected, `${slug}: optional summary visibility`);
+      assert.equal(detail.includes('id="key-points-title"'), expected, `${slug}: optional summary heading`);
+    }
     const indexed = spawnSync(process.execPath, [pagefindCli, "--site", outDir], { cwd: projectRoot, env, encoding: "utf8" });
     process.stdout.write(indexed.stdout || ""); process.stderr.write(indexed.stderr || "");
     if (indexed.status !== 0) process.exitCode = indexed.status ?? 1;

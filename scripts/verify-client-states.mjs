@@ -62,7 +62,7 @@ export async function createClient({ source, catalog, base, pagefindPath, search
     for (let i = 0; i < 250; i++) { if (predicate()) return; await new Promise((done) => setTimeout(done, 4)); }
     assert.fail("Client state timed out");
   }
-  const settled = () => until(() => !elements["search-status"].textContent.includes("중입니다"));
+  const settled = () => until(() => elements["article-results"].getAttribute("aria-busy") === "false");
   const query = (value) => { elements["article-search"].value = value; elements["article-controls"].fire("submit"); };
   const titles = () => elements["article-results"].children.map((card) => card.querySelector(".article-card__title-link").textContent);
   await settled();
@@ -257,12 +257,27 @@ export async function verifyClientStates(options) {
   assert.equal(message.querySelector(".empty-state__closing-quote").textContent, "”");
   assert.equal(message.textContent, "“last”와 일치하는 기사가 없습니다.");
 
+  // Spaces typed between words must survive the synchronous render and its completion.
+  for (const value of ["보안", "보안 ", "보안  ", "보안  뉴스 ", "  "]) {
+    type(value);
+    assert.equal(liveInput.elements["article-search"].value, value, "Live search must preserve the exact input");
+    await liveInput.settled();
+    assert.equal(liveInput.elements["article-search"].value, value, "Search completion must preserve spaces");
+    assert.equal(new URLSearchParams(liveInput.location.search).get("q"), value.trim() || null);
+  }
+  liveInput.elements["article-search"].fire("compositionstart");
+  type("보안 뉴스 ");
+  liveInput.elements["article-search"].fire("compositionend");
+  await liveInput.settled();
+  assert.equal(liveInput.elements["article-search"].value, "보안 뉴스 ", "IME completion must preserve trailing spaces");
+
   const pending = new Map();
   const controlled = await createClient({ ...options, search: (query) => { const task = deferred(); pending.set(query, task); return task.promise; } });
   controlled.query("pending"); await controlled.until(() => pending.has("pending"));
   assert.equal(new URLSearchParams(controlled.location.search).get("q"), "pending", "The query must be saved before the search finishes");
   assert.equal(controlled.elements["empty-state"].hidden, true);
   assert.equal(controlled.elements["article-results"].getAttribute("aria-busy"), "true");
+  assert.equal(controlled.elements["search-status"].textContent, "", "Pending searches must not display a loading message");
   controlled.window.fire("pagehide");
   pending.get("pending").resolve({ results: [] }); await nextTurn();
   assert.equal(controlled.elements["empty-state"].hidden, true, "A search completing after leaving must not overwrite the suspended page");

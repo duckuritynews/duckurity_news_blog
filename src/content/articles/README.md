@@ -4,6 +4,8 @@ Create each article as `src/content/articles/<unique-slug>/index.md`. Keep image
 
 Start new stories as drafts and replace every placeholder before publishing:
 
+`keyPoints` is optional. Omit it, use `[]`, or leave all entries blank to hide the summary section. When provided, use exactly three non-empty points.
+
 ```yaml
 ---
 slug: unique-lowercase-slug

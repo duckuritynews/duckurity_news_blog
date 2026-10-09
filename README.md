@@ -26,7 +26,7 @@ articles/
       detail.webp
 ```
 
-필수 frontmatter 예시:
+frontmatter 예시 (`keyPoints`는 선택 항목):
 
 ```yaml
 ---
@@ -44,7 +44,7 @@ keyPoints:
 ---
 ```
 
-`slug`는 기사 폴더 이름과 별개인 고유 영문 소문자 URL 식별자입니다. `publishedAt`에는 시간대가 포함된 ISO 8601 날짜를 적고, `keyPoints`는 세 항목을 작성합니다. 같은 폴더 안의 이미지는 Markdown에서 `![대체 텍스트](./images/detail.webp)`로 연결할 수 있습니다. 표지 이미지는 `cover: ./images/cover.svg`와 설명용 `coverAlt`를 함께 지정합니다.
+`slug`는 기사 폴더 이름과 별개인 고유 영문 소문자 URL 식별자입니다. `publishedAt`에는 시간대가 포함된 ISO 8601 날짜를 적습니다. `keyPoints`는 선택 항목이며, 작성할 때는 내용이 있는 세 항목을 적습니다. 생략하거나 빈 배열(`[]`), 공백만 있는 항목을 넣으면 상세 페이지의 ‘핵심 3줄’ 영역을 표시하지 않습니다. 같은 폴더 안의 이미지는 Markdown에서 `![대체 텍스트](./images/detail.webp)`로 연결할 수 있습니다. 표지 이미지는 `cover: ./images/cover.svg`와 설명용 `coverAlt`를 함께 지정합니다.
 
 `draft: false`이고 게시 시각이 빌드 시각 이전인 기사만 공개됩니다. 미래 날짜를 지정해도 시간이 지났을 때 저절로 게시되지는 않으므로, 해당 시각 이후 다시 빌드·배포해야 합니다. 날짜 표시는 현재 UTC 기준입니다.
 

@@ -12,7 +12,10 @@ const articles = defineCollection({
     publishedAt: z.string().refine((value) => /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value)), "Use an ISO 8601 timestamp with an explicit timezone."),
     updatedAt: z.string().optional(), draft: z.boolean(),
     authors: z.array(z.string().trim().min(1)).min(1), tags: z.array(z.string().trim().min(1)).min(1),
-    keyPoints: z.array(z.string().trim().min(1)).length(3), cover: image().optional(), coverAlt: z.string().trim().optional(),
+    keyPoints: z.array(z.string().trim()).default([])
+      .transform((points) => points.filter((point) => point.length > 0))
+      .refine((points) => points.length === 0 || points.length === 3, "Omit keyPoints or provide exactly three non-empty points."),
+    cover: image().optional(), coverAlt: z.string().trim().optional(),
     level: z.enum(["\uCD08\uAE09", "\uC911\uAE09", "\uACE0\uAE09"]).optional(),
     searchAliases: z.array(z.string()).default([]), cveIds: z.array(z.string().regex(/^CVE-\d{4}-\d{4,}$/i)).default([]),
   }).superRefine((article, context) => {
