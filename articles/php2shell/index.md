@@ -133,28 +133,28 @@ Ubuntu 같은 운영체제 공급사는 기존 버전에 보안 수정을 반영
 
 ## 출처
 
-1. 소니 — 10월 21일 밤부터의 긴급 시스템 점검 및 일부 서비스 중단에 관한 공식 공지 — 10월 23일 게시. PHP 취약점에 대한 예방 조치로 10월 22일 오후 7시 30분경 점검을 완료했다고 설명한다. 정확한 시작 시각이 없어 최초 PHP 수정판 공개 전 중단 여부는 확정할 수 없다. 시각은 한국과 같은 일본 현지 기준이다.
-2. 소니 판매점 Kunkoku — 소니 스토어 기능 복구 관측 기록 — 제품 정보·스토어의 점검 안내와 구매 페이지·장바구니·My Sony 계정 페이지의 이용 차질 및 복구에 관한 현장 기록.
-3. PHP — 2026년 공식 공지 — 10월 21일 두 취약점의 보안 권고와 구버전 소스 백포트.
-4. PHP — CVE-2026-109618 기술 권고 — 메모리 부족 처리 문제, 영향과 수정 버전.
-5. PHP — CVE-2026-109619 기술 권고 — 요청 간 내부 상태 잔존, 악용 조건과 수정 버전.
-6. WordPress — 공식 실행 요구사항 — PHP 사용과 실행 조건.
-7. Drupal — PHP 요구사항 — PHP 사용과 버전별 요구사항.
-8. Joomla — 기술 요구사항 — PHP 사용과 실행 조건.
-9. W3Techs — PHP 사용 통계 — 2026년 10월 29일 PHP 사용 비율과 통계의 분모.
-10. Cloudflare — PHP2Shell에 대한 WAF 보호 배포 — 공개 전 보호 배포, 무료 요금제 포함 범위와 업데이트 권고.
-11. Wikimedia Foundation — PHP 취약점이 Wikimedia Cloud Services에 미친 영향 — 중단 대상, 분산 관리 구조와 복구 조건.
-12. Orange — PHP를 사용하는 일부 웹사이트와 애플리케이션의 일시적 접근 중단 — 예방적 중단과 순차 복구 방침.
-13. AWS — MadPot에서 관측한 공개 전 PHP2Shell 악용 시도 — 10월 17일 관측, 성공 여부의 불확실성, 침해 흔적 점검 권고.
-14. CISA — 두 취약점의 KEV 등재 공지 — 미국 현지 10월 26일 두 CVE의 등재.
-15. Dream Research — PHP2Shell과 권한 상승 취약점을 연계한 시스템 25대 침해 분석 — 분석된 시스템 수, 국가, 공격 경로와 확인되지 않은 후속 결과.
-16. Unit 42 — PHP 취약점 위협 브리핑과 10월 25일 정정 — 유럽 정부기관 침해와 PHP2Shell의 연관성 주장 철회.
-17. 대한민국 정책브리핑 — PHP 긴급 업데이트 권고와 사이버위기 경보 상향 — 경보 상향 시각과 국내 대응 수칙.
-18. 카페24 — 10월 21일 PHP 취약점 최초 조치 — 오전 11시 30분부터 진행한 업로드 진행률 기능 비활성화.
-19. 카페24 — 10월 21일 PHP 취약점 추가 조치 — 업로드·입력 제한과 서비스 영향.
-20. 카페24 — PHP 공식 보안 패치 적용 공지 — 10월 21일 오후 11시 30분부터의 패치 작업.
-21. 가비아 — PHP 취약점 긴급 조치와 고객 확인 사항 — 버전별 업데이트·백포트·완화 조치 및 고객 관리 책임.
-22. 안랩 ASEC — 국내 PHP 서버 약 11만 개의 집계 방법 — 112,183건의 의미와 통계 해석의 한계.
-23. PHP — 공식 지원 버전과 지원 기간 — 정식 지원 범위와 지원 종료의 의미.
-24. Ubuntu — PHP 보안 공지 USN-8948-1 — PHP 8.1 등을 포함한 배포판 수정 패키지.
-25. OX Security — 공개 5일 후 PHP2Shell 패치 적용 조사 — Shodan 기반 분류 방법, 판정 대상과 수정 버전 비율.
+1. 소니 — 10월 21일 밤부터의 긴급 시스템 점검 및 일부 서비스 중단에 관한 공식 공지 — 10월 23일 게시. PHP 취약점에 대한 예방 조치로 10월 22일 오후 7시 30분경 점검을 완료했다고 설명한다. 정확한 시작 시각이 없어 최초 PHP 수정판 공개 전 중단 여부는 확정할 수 없다. 시각은 한국과 같은 일본 현지 기준이다. (https://www.sony.jp/msc/info/20261023/)
+2. 소니 판매점 Kunkoku — 소니 스토어 기능 복구 관측 기록 — 제품 정보·스토어의 점검 안내와 구매 페이지·장바구니·My Sony 계정 페이지의 이용 차질 및 복구에 관한 현장 기록. (https://kunkoku.jp/sonystore-maintenance-202610-2.html)
+3. PHP — 2026년 공식 공지 — 10월 21일 두 취약점의 보안 권고와 구버전 소스 백포트. (https://www.php.net/archive/2026.php#2026-10-21-5)
+4. PHP — CVE-2026-109618 기술 권고 — 메모리 부족 처리 문제, 영향과 수정 버전. (https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w)
+5. PHP — CVE-2026-109619 기술 권고 — 요청 간 내부 상태 잔존, 악용 조건과 수정 버전. (https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)
+6. WordPress — 공식 실행 요구사항 — PHP 사용과 실행 조건. (https://wordpress.org/about/requirements/)
+7. Drupal — PHP 요구사항 — PHP 사용과 버전별 요구사항. (https://www.drupal.org/docs/getting-started/system-requirements/php-requirements)
+8. Joomla — 기술 요구사항 — PHP 사용과 실행 조건. (https://manual.joomla.org/docs/next/get-started/technical-requirements/)
+9. W3Techs — PHP 사용 통계 — 2026년 10월 29일 PHP 사용 비율과 통계의 분모. (https://w3techs.com/technologies/details/pl-php)
+10. Cloudflare — PHP2Shell에 대한 WAF 보호 배포 — 공개 전 보호 배포, 무료 요금제 포함 범위와 업데이트 권고. (https://blog.cloudflare.com/php-vulnerabilities-waf-protection/)
+11. Wikimedia Foundation — PHP 취약점이 Wikimedia Cloud Services에 미친 영향 — 중단 대상, 분산 관리 구조와 복구 조건. (https://diff.wikimedia.org/2026/10/21/impact-of-php-vulnerabilities-on-wikimedia-cloud-services/)
+12. Orange — PHP를 사용하는 일부 웹사이트와 애플리케이션의 일시적 접근 중단 — 예방적 중단과 순차 복구 방침. (https://newsroom.orange.com/orange-suspend-temporairement-lacces-a-certains-sites-et-applications-utilisant-php-514804/?lang=eng)
+13. AWS — MadPot에서 관측한 공개 전 PHP2Shell 악용 시도 — 10월 17일 관측, 성공 여부의 불확실성, 침해 흔적 점검 권고. (https://aws.amazon.com/blogs/security/amazon-threat-intelligence-identifies-php2shell-exploitation-prior-to-public-disclosure-in-madpot/)
+14. CISA — 두 취약점의 KEV 등재 공지 — 미국 현지 10월 26일 두 CVE의 등재. (https://content.govdelivery.com/accounts/USDHSCISA/bulletins/4309083)
+15. Dream Research — PHP2Shell과 권한 상승 취약점을 연계한 시스템 25대 침해 분석 — 분석된 시스템 수, 국가, 공격 경로와 확인되지 않은 후속 결과. (https://dreamgroup.com/blog/chained-php2shell-exploit-roots-25-servers)
+16. Unit 42 — PHP 취약점 위협 브리핑과 10월 25일 정정 — 유럽 정부기관 침해와 PHP2Shell의 연관성 주장 철회. (https://unit42.paloaltonetworks.com/cve-2026-109618-cve-2026-109619/)
+17. 대한민국 정책브리핑 — PHP 긴급 업데이트 권고와 사이버위기 경보 상향 — 경보 상향 시각과 국내 대응 수칙. (https://www.korea.kr/news/policyNewsView.do?newsId=148974113)
+18. 카페24 — 10월 21일 PHP 취약점 최초 조치 — 오전 11시 30분부터 진행한 업로드 진행률 기능 비활성화. (https://help.cafe24.com/notice/system-notice/20261021_php-security-emergency/)
+19. 카페24 — 10월 21일 PHP 취약점 추가 조치 — 업로드·입력 제한과 서비스 영향. (https://help.cafe24.com/notice/system-notice/20261021_php-security-additional/)
+20. 카페24 — PHP 공식 보안 패치 적용 공지 — 10월 21일 오후 11시 30분부터의 패치 작업. (https://help.cafe24.com/notice/system-notice/20261023_php-security-official-patch/)
+21. 가비아 — PHP 취약점 긴급 조치와 고객 확인 사항 — 버전별 업데이트·백포트·완화 조치 및 고객 관리 책임. (https://www.gabia.com/gabia_notice/view.php?seq_no=45924)
+22. 안랩 ASEC — 국내 PHP 서버 약 11만 개의 집계 방법 — 112,183건의 의미와 통계 해석의 한계. (https://asec.ahnlab.com/ko/95982/)
+23. PHP — 공식 지원 버전과 지원 기간 — 정식 지원 범위와 지원 종료의 의미. (https://www.php.net/supported-versions.php)
+24. Ubuntu — PHP 보안 공지 USN-8948-1 — PHP 8.1 등을 포함한 배포판 수정 패키지. (https://ubuntu.com/security/notices/USN-8948-1)
+25. OX Security — 공개 5일 후 PHP2Shell 패치 적용 조사 — Shodan 기반 분류 방법, 판정 대상과 수정 버전 비율. (https://www.ox.security/blog/php2shell-day-5-the-panic-hasnt-turned-into-patching/)
