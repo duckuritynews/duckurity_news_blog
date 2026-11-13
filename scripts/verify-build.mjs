@@ -131,7 +131,8 @@ assert.ok(newsletterHtml.includes('class="home-image-slot home-hero__image"'), "
 assert.ok(!newsletterHtml.includes('class="home-feature__arrow"'), "Weekly cards must not contain the removed read arrow");
 const featuredLinks = [...newsletterHtml.matchAll(/class="home-feature__card" href="([^"]+)"/g)].map((match) => unescapeHtml(match[1]));
 assert.deepEqual(featuredLinks, weekly.map((article) => article.href), "All picks must belong to the latest Korean publication week in newest-first order");
-assert.equal(newsletterHtml.includes("data-weekly-controls"), weekly.length > 1, "Only multiple picks need pagination controls");
+const hasWeeklyControls = /<nav class="home-feature__pagination"[^>]*data-weekly-controls/.test(newsletterHtml);
+assert.equal(hasWeeklyControls, weekly.length > 1, "Only multiple picks need pagination controls");
 for (const card of newsletterHtml.matchAll(/class="home-feature__card"[\s\S]*?<\/a>/g)) assert.ok(!card[0].includes("<p>"), "Weekly picks must not display article summaries");
 if (weekly.length > 1) {
   const controls = newsletterHtml.match(/<nav class="home-feature__pagination"[^>]*>([\s\S]*?)<\/nav>/)[1];
