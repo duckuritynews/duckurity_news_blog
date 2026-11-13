@@ -1,7 +1,7 @@
 ---
-slug: security-news-1
-title: "캡처도 보안업무 Ep.6"
-summary: "Ep.4 문의자만 늘었다"
+slug: security-news-6
+title: "보안팀의 평범한 하루 Ep.6"
+summary: "Ep.6 캡쳐도 보안업무"
 publishedAt: "2026-11-06T15:00:00+09:00"
 draft: false
 authors: ["홍건표"]
@@ -23,4 +23,4 @@ keyPoints:
 7. 이미지가 있다면 같은 기사 폴더의 images/에 넣고 다음 문법으로 연결시키기. -> ![이미지 설명](./images/파일명.확장자)
 8. 다 썼다면 폴더 그대로 압축해서 단톡에 올리면 됩니다.
 -->
-![1장](./images/image.png)
+![1장](./images/뉴스4.png)
