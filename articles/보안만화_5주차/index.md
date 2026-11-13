@@ -2,7 +2,7 @@
 slug: security-news-5
 title: "보안팀의 평범한 하루 Ep.5"
 summary: "Ep.5 금요일의 약속"
-publishedAt: "2026-11-06T15:00:00+09:00"
+publishedAt: "2026-11-13T13:00:00+09:00"
 draft: false
 authors: ["홍건표"]
 tags: [만화]
