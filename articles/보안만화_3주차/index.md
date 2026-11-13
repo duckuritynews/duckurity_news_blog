@@ -1,10 +1,10 @@
 ---
-slug: security-news-1
+slug: security-news-4
 title: "보안팀의 평범한 하루 Ep.4"
 summary: "Ep.4 문의자만 늘었다"
 publishedAt: "2026-10-30T15:00:00+09:00"
 draft: false
-authors: ["최상훈"]
+authors: ["홍건표"]
 tags: [만화]
 keyPoints:
   - " "
