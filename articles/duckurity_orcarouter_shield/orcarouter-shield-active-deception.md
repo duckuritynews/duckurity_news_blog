@@ -1,6 +1,6 @@
 ---
 title: "공격자를 차단하는 대신 속인다? AI 시대의 능동적 기만 방어 기술"
-publishedAt: "2026-11-27T13:00:00+09:00"
+publishedAt: "2026-11-27T14:10:00+09:00"
 description: "OrcaRouter Shield의 합성 환경, 추론 맥락 오염, 미끼 인증정보를 이용한 AI 공격 에이전트 대응 방식"
 authors: ["이재윤"]
 tags: [정보보안, AI보안, ActiveDeception, OrcaRouter, 사이버보안]

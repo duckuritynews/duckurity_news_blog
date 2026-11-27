@@ -1,5 +1,5 @@
 ---
-slug: November_27_security_news
+slug: november-27-security-news
 title: "11월 4주차 보안 사건사고.ZIP"
 summary: "한전, 한국투자저축은행, 삼성증권, HD현대로보틱스의 개인정보 유출과 개인정보위 사칭 악성메일 사례 정리"
 publishedAt: "2026-11-27T14:00:00+09:00"
